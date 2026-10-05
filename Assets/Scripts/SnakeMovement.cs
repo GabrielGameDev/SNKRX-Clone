@@ -5,6 +5,8 @@ using UnityEngine;
 /// Controla o movimento da cabeça da cobra e coordena todos os segmentos do corpo (estilo SNKRX).
 /// Utiliza um buffer de histórico de posições baseado em distância percorrida, garantindo que
 /// os segmentos sigam fielmente as curvas sem cortar caminho e sem jitter.
+/// Inclui suporte completo ao movimento estilo Pac-Man (screen wrap toroidal), permitindo que a cobra
+/// saia suavemente por uma borda da tela/arena e reapareça na borda oposta.
 /// </summary>
 [DisallowMultipleComponent]
 public class SnakeMovement : MonoBehaviour
@@ -42,6 +44,31 @@ public class SnakeMovement : MonoBehaviour
     [Tooltip("Distância mínima percorrida pela cabeça para registrar um novo ponto na trilha.")]
     [SerializeField] private float minRecordDistance = 0.05f;
 
+    [Header("Screen / Arena Wrap (Pac-Man Style)")]
+    [Tooltip("Ativa o movimento estilo Pac-Man: ao sair de um lado da tela/arena, reaparece do lado oposto.")]
+    [SerializeField] private bool enableWrap = true;
+
+    [Tooltip("Se verdadeiro, detecta automaticamente os limites da tela pela câmera ortográfica.")]
+    [SerializeField] private bool useCameraBounds = true;
+
+    [Tooltip("Câmera de referência para os limites (se vazia, utiliza a Camera.main).")]
+    [SerializeField] private Camera targetCamera;
+
+    [Tooltip("Centro da arena de jogo (usado para limites customizados ou como offset da câmera).")]
+    [SerializeField] private Vector2 boundsCenter = Vector2.zero;
+
+    [Tooltip("Dimensões manuais da arena (Largura X, Altura Y) caso não use a câmera ortográfica.")]
+    [SerializeField] private Vector2 customBoundsSize = new Vector2(35.55f, 20f);
+
+    [Tooltip("Habilita o wrap horizontal (Esquerda <-> Direita).")]
+    [SerializeField] private bool wrapHorizontal = true;
+
+    [Tooltip("Habilita o wrap vertical (Cima <-> Baixo).")]
+    [SerializeField] private bool wrapVertical = true;
+
+    [Tooltip("Margem além da borda antes de teleportar (permite que o sprite saia suavemente da tela antes de surgir do outro lado).")]
+    [SerializeField] private float wrapPadding = 0.5f;
+
     [Header("Input")]
     [Tooltip("Referência ao InputController (se não definido, busca no mesmo GameObject ou usa Input clássico).")]
     [SerializeField] private InputController inputController;
@@ -55,10 +82,21 @@ public class SnakeMovement : MonoBehaviour
     // Histórico de pontos percorridos pela cabeça
     private readonly List<PathPoint> pathHistory = new List<PathPoint>();
 
+    // Cache interno de limites
+    private Vector2 currentBoundsCenter;
+    private Vector2 currentEffectiveHalfSize;
+    private Vector2 currentEffectiveSize;
+    private Rigidbody2D rb2d;
+
     public IReadOnlyList<SnakeSegment> Segments => segments;
     public float MoveSpeed { get => moveSpeed; set => moveSpeed = value; }
     public float SteerSpeed { get => steerSpeed; set => steerSpeed = value; }
     public float SegmentSpacing { get => segmentSpacing; set => segmentSpacing = Mathf.Max(0.1f, value); }
+    public bool EnableWrap { get => enableWrap; set => enableWrap = value; }
+    public bool UseCameraBounds { get => useCameraBounds; set => useCameraBounds = value; }
+    public Vector2 CustomBoundsSize { get => customBoundsSize; set => customBoundsSize = value; }
+    public Vector2 BoundsCenter { get => boundsCenter; set => boundsCenter = value; }
+    public float WrapPadding { get => wrapPadding; set => wrapPadding = Mathf.Max(0f, value); }
 
     private void Awake()
     {
@@ -66,20 +104,136 @@ public class SnakeMovement : MonoBehaviour
         {
             inputController = GetComponent<InputController>();
         }
+
+        rb2d = GetComponent<Rigidbody2D>();
+
+        if (targetCamera == null)
+        {
+            targetCamera = Camera.main;
+        }
+
+        UpdateBoundsData();
     }
 
     private void Start()
     {
+        UpdateBoundsData();
         InitializePathHistory();
         SpawnInitialSegments();
     }
 
     private void Update()
     {
+        UpdateBoundsData();
         HandleSteering();
         HandleForwardMovement();
         UpdatePathHistory();
         UpdateSegmentsPositions();
+    }
+
+    /// <summary>
+    /// Recalcula as dimensões ativas da tela/arena levando em conta câmera e padding.
+    /// </summary>
+    public void UpdateBoundsData()
+    {
+        if (!enableWrap) return;
+
+        if (useCameraBounds)
+        {
+            if (targetCamera == null)
+            {
+                targetCamera = Camera.main;
+            }
+
+            if (targetCamera != null && targetCamera.orthographic)
+            {
+                float halfH = targetCamera.orthographicSize;
+                float halfW = halfH * targetCamera.aspect;
+                currentBoundsCenter = (Vector2)targetCamera.transform.position + boundsCenter;
+                currentEffectiveHalfSize = new Vector2(halfW + wrapPadding, halfH + wrapPadding);
+            }
+            else
+            {
+                currentBoundsCenter = boundsCenter;
+                currentEffectiveHalfSize = (customBoundsSize * 0.5f) + new Vector2(wrapPadding, wrapPadding);
+            }
+        }
+        else
+        {
+            currentBoundsCenter = boundsCenter;
+            currentEffectiveHalfSize = (customBoundsSize * 0.5f) + new Vector2(wrapPadding, wrapPadding);
+        }
+
+        currentEffectiveSize = currentEffectiveHalfSize * 2f;
+    }
+
+    /// <summary>
+    /// Aplica a lógica toroidal (Pac-Man) a uma coordenada dentro de [min, max].
+    /// </summary>
+    public Vector3 WrapPosition(Vector3 pos)
+    {
+        if (!enableWrap) return pos;
+
+        float x = pos.x;
+        float y = pos.y;
+
+        if (wrapHorizontal && currentEffectiveSize.x > 0.001f)
+        {
+            float minX = currentBoundsCenter.x - currentEffectiveHalfSize.x;
+            float maxX = currentBoundsCenter.x + currentEffectiveHalfSize.x;
+            float width = currentEffectiveSize.x;
+
+            while (x > maxX) x -= width;
+            while (x < minX) x += width;
+        }
+
+        if (wrapVertical && currentEffectiveSize.y > 0.001f)
+        {
+            float minY = currentBoundsCenter.y - currentEffectiveHalfSize.y;
+            float maxY = currentBoundsCenter.y + currentEffectiveHalfSize.y;
+            float height = currentEffectiveSize.y;
+
+            while (y > maxY) y -= height;
+            while (y < minY) y += height;
+        }
+
+        return new Vector3(x, y, pos.z);
+    }
+
+    /// <summary>
+    /// Calcula o vetor de deslocamento mínimo de 'from' até 'to' considerando a periodicidade toroidal.
+    /// Evita que cálculos de interpolação atravessem a arena inteira em linha reta no frame do wrap.
+    /// </summary>
+    public Vector3 GetToroidalDelta(Vector3 from, Vector3 to)
+    {
+        float dx = to.x - from.x;
+        float dy = to.y - from.y;
+        float dz = to.z - from.z;
+
+        if (enableWrap)
+        {
+            if (wrapHorizontal && currentEffectiveSize.x > 0.001f)
+            {
+                float w = currentEffectiveSize.x;
+                dx -= Mathf.Round(dx / w) * w;
+            }
+
+            if (wrapVertical && currentEffectiveSize.y > 0.001f)
+            {
+                float h = currentEffectiveSize.y;
+                dy -= Mathf.Round(dy / h) * h;
+            }
+        }
+
+        return new Vector3(dx, dy, dz);
+    }
+
+    /// <summary>
+    /// Distância mínima considerando o espaço toroidal.
+    /// </summary>
+    public float GetToroidalDistance(Vector3 from, Vector3 to)
+    {
+        return GetToroidalDelta(from, to).magnitude;
     }
 
     /// <summary>
@@ -98,6 +252,10 @@ public class SnakeMovement : MonoBehaviour
         for (int i = 0; i <= steps; i++)
         {
             Vector3 pos = transform.position + (backwardDir * (i * minRecordDistance));
+            if (enableWrap)
+            {
+                pos = WrapPosition(pos);
+            }
             pathHistory.Add(new PathPoint(pos, transform.rotation));
         }
     }
@@ -125,12 +283,6 @@ public class SnakeMovement : MonoBehaviour
             steerInput = inputController.Movement.x;
         }
 
-        // Fallback para Input horizontal caso InputController não retorne valor
-        // if (Mathf.Approximately(steerInput, 0f))
-        // {
-        //     steerInput = Input.GetAxisRaw("Horizontal");
-        // }
-
         if (!Mathf.Approximately(steerInput, 0f))
         {
             // Input positivo (D / Seta Direita) gira no sentido horário (-Z)
@@ -141,15 +293,30 @@ public class SnakeMovement : MonoBehaviour
     }
 
     /// <summary>
-    /// Move a cabeça continuamente na direção para onde está apontando (transform.up).
+    /// Move a cabeça continuamente na direção para onde está apontando (transform.up)
+    /// e aplica o wrap no estilo Pac-Man caso alcance a borda da arena.
     /// </summary>
     private void HandleForwardMovement()
     {
         transform.position += transform.up * (moveSpeed * Time.deltaTime);
+
+        if (enableWrap)
+        {
+            Vector3 wrappedPos = WrapPosition(transform.position);
+            if (wrappedPos != transform.position)
+            {
+                transform.position = wrappedPos;
+                if (rb2d != null)
+                {
+                    rb2d.position = wrappedPos;
+                }
+            }
+        }
     }
 
     /// <summary>
     /// Atualiza o histórico de posições com a posição atual da cabeça.
+    /// Utiliza distância toroidal para não registrar distâncias falsas durante a travessia de borda.
     /// </summary>
     private void UpdatePathHistory()
     {
@@ -159,7 +326,7 @@ public class SnakeMovement : MonoBehaviour
             return;
         }
 
-        float distFromFirst = Vector3.Distance(transform.position, pathHistory[0].position);
+        float distFromFirst = GetToroidalDistance(pathHistory[0].position, transform.position);
 
         if (distFromFirst >= minRecordDistance)
         {
@@ -174,6 +341,8 @@ public class SnakeMovement : MonoBehaviour
 
     /// <summary>
     /// Percorre o histórico de pontos e posiciona cada segmento na distância exata ao longo da trilha.
+    /// Trata a continuidade das bordas de forma que cada segmento saia por uma borda e surja
+    /// na oposta suavemente e de maneira independente.
     /// </summary>
     private void UpdateSegmentsPositions()
     {
@@ -191,14 +360,20 @@ public class SnakeMovement : MonoBehaviour
             PathPoint pA = pathHistory[i];
             PathPoint pB = pathHistory[i + 1];
 
-            float stepDist = Vector3.Distance(pA.position, pB.position);
+            Vector3 delta = GetToroidalDelta(pA.position, pB.position);
+            float stepDist = delta.magnitude;
 
             while (accumulatedDistance + stepDist >= targetDistance)
             {
                 float excess = targetDistance - accumulatedDistance;
                 float t = stepDist > 0.0001f ? (excess / stepDist) : 0f;
 
-                Vector3 targetPos = Vector3.Lerp(pA.position, pB.position, t);
+                Vector3 targetPos = pA.position + (delta * t);
+                if (enableWrap)
+                {
+                    targetPos = WrapPosition(targetPos);
+                }
+
                 Quaternion targetRot = Quaternion.Slerp(pA.rotation, pB.rotation, t);
 
                 segments[currentSegmentIdx].UpdatePositionAndRotation(targetPos, targetRot);
@@ -226,7 +401,8 @@ public class SnakeMovement : MonoBehaviour
         while (currentSegmentIdx < segments.Count)
         {
             PathPoint lastPoint = pathHistory[pathHistory.Count - 1];
-            segments[currentSegmentIdx].UpdatePositionAndRotation(lastPoint.position, lastPoint.rotation);
+            Vector3 finalPos = enableWrap ? WrapPosition(lastPoint.position) : lastPoint.position;
+            segments[currentSegmentIdx].UpdatePositionAndRotation(finalPos, lastPoint.rotation);
             currentSegmentIdx++;
         }
 
@@ -248,6 +424,10 @@ public class SnakeMovement : MonoBehaviour
         SnakeSegment newSegment;
 
         Vector3 spawnPos = transform.position - (transform.up * ((newIndex + 1) * segmentSpacing));
+        if (enableWrap)
+        {
+            spawnPos = WrapPosition(spawnPos);
+        }
         Quaternion spawnRot = transform.rotation;
 
         if (segmentPrefab != null)
@@ -326,6 +506,28 @@ public class SnakeMovement : MonoBehaviour
     {
         if (!showGizmos) return;
 
+        // Desenha os limites da tela / arena de wrap (Pac-Man)
+        if (enableWrap)
+        {
+            Gizmos.color = new Color(0.2f, 1f, 0.6f, 0.75f);
+            Vector2 center = boundsCenter;
+            Vector2 size = customBoundsSize + new Vector2(wrapPadding * 2f, wrapPadding * 2f);
+
+            if (useCameraBounds)
+            {
+                Camera cam = targetCamera != null ? targetCamera : Camera.main;
+                if (cam != null && cam.orthographic)
+                {
+                    float h = (cam.orthographicSize + wrapPadding) * 2f;
+                    float w = ((cam.orthographicSize * cam.aspect) + wrapPadding) * 2f;
+                    center = (Vector2)cam.transform.position + boundsCenter;
+                    size = new Vector2(w, h);
+                }
+            }
+
+            Gizmos.DrawWireCube(new Vector3(center.x, center.y, 0f), new Vector3(size.x, size.y, 0.1f));
+        }
+
         // Desenha a direção da cabeça
         Gizmos.color = Color.green;
         Gizmos.DrawRay(transform.position, transform.up * 1.2f);
@@ -338,9 +540,14 @@ public class SnakeMovement : MonoBehaviour
         {
             if (segments[i] != null)
             {
-                Gizmos.DrawLine(previousPos, segments[i].transform.position);
-                Gizmos.DrawWireSphere(segments[i].transform.position, 0.2f);
-                previousPos = segments[i].transform.position;
+                Vector3 segPos = segments[i].transform.position;
+                // Evita desenhar linhas cruzando a tela inteira quando segmentos estão em lados opostos
+                if (!enableWrap || Vector3.Distance(previousPos, segPos) < (segmentSpacing * 3f))
+                {
+                    Gizmos.DrawLine(previousPos, segPos);
+                }
+                Gizmos.DrawWireSphere(segPos, 0.2f);
+                previousPos = segPos;
             }
         }
 
@@ -350,7 +557,12 @@ public class SnakeMovement : MonoBehaviour
             Gizmos.color = new Color(0.2f, 0.8f, 1f, 0.4f);
             for (int i = 0; i < pathHistory.Count - 1; i++)
             {
-                Gizmos.DrawLine(pathHistory[i].position, pathHistory[i + 1].position);
+                Vector3 p1 = pathHistory[i].position;
+                Vector3 p2 = pathHistory[i + 1].position;
+                if (!enableWrap || Vector3.Distance(p1, p2) < (minRecordDistance * 3.5f))
+                {
+                    Gizmos.DrawLine(p1, p2);
+                }
             }
         }
     }
