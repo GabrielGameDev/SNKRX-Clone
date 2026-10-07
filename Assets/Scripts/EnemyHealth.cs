@@ -19,6 +19,14 @@ public class EnemyHealth : MonoBehaviour
     [Tooltip("Vida máxima inicial do inimigo.")]
     [SerializeField] private float maxHealth = 10f;
 
+    [Header("XP Drop")]
+    [Tooltip("Prefab do item de XP solto quando este inimigo morre. Configure no Inspector.")]
+    [SerializeField] private XpPickup xpPickupPrefab;
+
+    [Tooltip("Quantidade de XP concedida ao coletar o item deste inimigo.")]
+    [Min(1)]
+    [SerializeField] private int xpDropAmount = 1;
+
     public float CurrentHealth { get; private set; }
     public float MaxHealth => maxHealth;
     public bool IsDead => CurrentHealth <= 0f;
@@ -66,6 +74,13 @@ public class EnemyHealth : MonoBehaviour
     protected virtual void Die()
     {
         OnDeath?.Invoke();
+
+        if (xpPickupPrefab != null)
+        {
+            XpPickup pickup = Instantiate(xpPickupPrefab, transform.position, Quaternion.identity);
+            pickup.Initialize(xpDropAmount);
+        }
+
         Destroy(gameObject);
     }
 }
