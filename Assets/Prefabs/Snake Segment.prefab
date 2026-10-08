@@ -186,7 +186,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::SegmentHealth
   maxHealth: 3
   isHead: 0
-  invulnerabilityDuration: 0.2
+  invulnerabilityDuration: 1
   spriteRenderer: {fileID: 79074488900445090}
   hitFlashColor: {r: 1, g: 0.3, b: 0.3, a: 1}
 

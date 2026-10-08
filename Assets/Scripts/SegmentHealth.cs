@@ -17,15 +17,29 @@ public class SegmentHealth : MonoBehaviour
     [Tooltip("Se verdadeiro, este componente pertence à cabeça principal da cobra.")]
     [SerializeField] private bool isHead = false;
 
-    [Tooltip("Tempo de invulnerabilidade temporária após sofrer um golpe.")]
-    [SerializeField] private float invulnerabilityDuration = 0.2f;
+    [Tooltip("Tempo de invulnerabilidade temporária após sofrer um golpe (em segundos).")]
+    [SerializeField] private float invulnerabilityDuration = 1.0f;
 
     [Header("Visual Feedback")]
     [Tooltip("SpriteRenderer do segmento para efeito de piscar ao receber dano.")]
     [SerializeField] private SpriteRenderer spriteRenderer;
 
-    [Tooltip("Cor aplicada durante o flash de dano.")]
+    [Tooltip("Cor aplicada durante o flash inicial de dano.")]
     [SerializeField] private Color hitFlashColor = new Color(1f, 0.3f, 0.3f, 1f);
+
+    [Tooltip("Intervalo entre cada piscada durante a invencibilidade.")]
+    [SerializeField] private float blinkInterval = 0.08f;
+
+    [Tooltip("Opacidade reduzida durante o efeito de piscar.")]
+    [Range(0f, 1f)]
+    [SerializeField] private float invulnerableAlpha = 0.3f;
+
+    [Header("Health Bar")]
+    [Tooltip("Barra de vida visual opcional deste segmento. Se não definida e autoCreateHealthBar estiver ativa, será criada automaticamente.")]
+    [SerializeField] private SegmentHealthBar healthBar;
+
+    [Tooltip("Se verdadeiro, cria automaticamente a barra de vida como filha deste objeto se nenhuma for especificada.")]
+    [SerializeField] private bool autoCreateHealthBar = true;
 
     private float currentHealth;
     private float invulnerabilityTimer;
@@ -37,6 +51,9 @@ public class SegmentHealth : MonoBehaviour
     public float MaxHealth => maxHealth;
     public bool IsDead => currentHealth <= 0f;
     public bool IsHead => isHead;
+    public bool IsInvulnerable => invulnerabilityTimer > 0f;
+    public float InvulnerabilityDuration { get => invulnerabilityDuration; set => invulnerabilityDuration = Mathf.Max(0f, value); }
+    public SegmentHealthBar HealthBar => healthBar;
 
     public event Action<float, float> OnHealthChanged; // (current, max)
     public event Action OnDeath;
@@ -55,6 +72,77 @@ public class SegmentHealth : MonoBehaviour
         {
             originalColor = spriteRenderer.color;
         }
+
+        SetupHealthBar();
+    }
+
+    private void SetupHealthBar()
+    {
+        if (healthBar == null)
+        {
+            healthBar = GetComponentInChildren<SegmentHealthBar>();
+
+            if (healthBar == null && autoCreateHealthBar)
+            {
+                GameObject barObj = new GameObject("HealthBar");
+                barObj.transform.SetParent(transform, false);
+                healthBar = barObj.AddComponent<SegmentHealthBar>();
+            }
+        }
+
+        if (healthBar != null)
+        {
+            healthBar.Initialize(this);
+        }
+    }
+
+    private void OnDisable()
+    {
+        if (flashCoroutine != null)
+        {
+            StopCoroutine(flashCoroutine);
+            flashCoroutine = null;
+        }
+
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = originalColor;
+        }
+    }
+
+    /// <summary>
+    /// Define a cor base do segmento e atualiza sua renderização e cor de retorno pós-dano.
+    /// </summary>
+    public void SetBaseColor(Color color)
+    {
+        originalColor = color;
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = color;
+        }
+    }
+
+    /// <summary>
+    /// Aumenta a vida máxima do segmento e opcionalmente cura a mesma quantia.
+    /// </summary>
+    public void IncreaseMaxHealth(float amount, bool healAmount = true)
+    {
+        maxHealth += amount;
+        if (healAmount)
+        {
+            currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        }
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
+    }
+
+    /// <summary>
+    /// Cura pontos de vida deste segmento até o limite de vida máxima.
+    /// </summary>
+    public void Heal(float amount)
+    {
+        if (IsDead || amount <= 0f) return;
+        currentHealth = Mathf.Min(maxHealth, currentHealth + amount);
+        OnHealthChanged?.Invoke(currentHealth, maxHealth);
     }
 
     private void Update()
@@ -62,11 +150,17 @@ public class SegmentHealth : MonoBehaviour
         if (invulnerabilityTimer > 0f)
         {
             invulnerabilityTimer -= Time.deltaTime;
+            if (invulnerabilityTimer <= 0f)
+            {
+                invulnerabilityTimer = 0f;
+                ResetVisual();
+            }
         }
     }
 
     /// <summary>
     /// Aplica dano a este segmento específico da cobra.
+    /// Se estiver no período de invencibilidade, ignora o dano.
     /// </summary>
     public void TakeDamage(float amount)
     {
@@ -77,14 +171,14 @@ public class SegmentHealth : MonoBehaviour
 
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
-        // Feedback visual
+        // Feedback visual contínuo durante a invencibilidade
         if (spriteRenderer != null && gameObject.activeInHierarchy)
         {
             if (flashCoroutine != null)
             {
                 StopCoroutine(flashCoroutine);
             }
-            flashCoroutine = StartCoroutine(HitFlashRoutine());
+            flashCoroutine = StartCoroutine(InvulnerabilityBlinkRoutine());
         }
 
         if (currentHealth <= 0f)
@@ -93,21 +187,50 @@ public class SegmentHealth : MonoBehaviour
         }
     }
 
-    private IEnumerator HitFlashRoutine()
+    private IEnumerator InvulnerabilityBlinkRoutine()
     {
-        if (spriteRenderer != null)
+        if (spriteRenderer == null) yield break;
+
+        // Flash inicial de dano
+        spriteRenderer.color = hitFlashColor;
+        yield return new WaitForSeconds(0.1f);
+
+        if (spriteRenderer == null) yield break;
+
+        // Piscar enquanto durar a invencibilidade
+        bool isDimmed = false;
+        Color dimmedColor = new Color(originalColor.r, originalColor.g, originalColor.b, invulnerableAlpha);
+
+        while (invulnerabilityTimer > 0f)
         {
-            spriteRenderer.color = hitFlashColor;
-            yield return new WaitForSeconds(0.1f);
             if (spriteRenderer != null)
             {
-                spriteRenderer.color = originalColor;
+                spriteRenderer.color = isDimmed ? originalColor : dimmedColor;
             }
+            isDimmed = !isDimmed;
+            yield return new WaitForSeconds(blinkInterval);
+        }
+
+        ResetVisual();
+    }
+
+    private void ResetVisual()
+    {
+        if (flashCoroutine != null)
+        {
+            StopCoroutine(flashCoroutine);
+            flashCoroutine = null;
+        }
+
+        if (spriteRenderer != null)
+        {
+            spriteRenderer.color = originalColor;
         }
     }
 
     private void Die()
     {
+        ResetVisual();
         OnDeath?.Invoke();
 
         if (isHead)

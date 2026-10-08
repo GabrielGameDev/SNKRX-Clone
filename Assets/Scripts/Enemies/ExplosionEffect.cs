@@ -16,6 +16,16 @@ public class ExplosionEffect : MonoBehaviour
     [Tooltip("SpriteRenderer do efeito.")]
     [SerializeField] private SpriteRenderer spriteRenderer;
 
+    public float MaxScale { get => maxScale; set => maxScale = value; }
+
+    /// <summary>
+    /// Permite inicializar a escala máxima dinamicamente (ex: proporcional ao raio de explosão).
+    /// </summary>
+    public void Initialize(float newMaxScale)
+    {
+        maxScale = newMaxScale;
+    }
+
     private void Awake()
     {
         if (spriteRenderer == null)

@@ -10,6 +10,8 @@ public class SnakeSegment : MonoBehaviour
 {
     [Header("Segment Info")]
     [SerializeField] private int segmentIndex;
+
+    private Rigidbody2D rb2d;
     
     public int SegmentIndex => segmentIndex;
     public SnakeMovement SnakeOwner { get; private set; }
@@ -19,9 +21,21 @@ public class SnakeSegment : MonoBehaviour
     /// </summary>
     public virtual void Initialize(int index, SnakeMovement owner)
     {
+        rb2d = GetComponent<Rigidbody2D>();
+        if (rb2d != null)
+        {
+            rb2d.interpolation = RigidbodyInterpolation2D.Interpolate;
+        }
+
         segmentIndex = index;
         SnakeOwner = owner;
         gameObject.name = $"Segment_{index}";
+
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.sortingOrder = -index;
+        }
     }
 
     /// <summary>
@@ -31,6 +45,12 @@ public class SnakeSegment : MonoBehaviour
     {
         segmentIndex = newIndex;
         gameObject.name = $"Segment_{newIndex}";
+
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.sortingOrder = -newIndex;
+        }
     }
 
     /// <summary>
@@ -38,6 +58,37 @@ public class SnakeSegment : MonoBehaviour
     /// </summary>
     public virtual void UpdatePositionAndRotation(Vector3 targetPosition, Quaternion targetRotation)
     {
-        transform.SetPositionAndRotation(targetPosition, targetRotation);
+        if (rb2d == null)
+        {
+            transform.SetPositionAndRotation(targetPosition, targetRotation);
+            return;
+        }
+
+        rb2d.MovePosition(targetPosition);
+        rb2d.MoveRotation(targetRotation.eulerAngles.z);
+    }
+
+    /// <summary>
+    /// Aplica uma cor customizada ao segmento e atualiza os componentes visuais e de gameplay vinculados.
+    /// </summary>
+    public virtual void SetSegmentColor(Color color)
+    {
+        SpriteRenderer sr = GetComponent<SpriteRenderer>();
+        if (sr != null)
+        {
+            sr.color = color;
+        }
+
+        SegmentHealth health = GetComponent<SegmentHealth>();
+        if (health != null)
+        {
+            health.SetBaseColor(color);
+        }
+
+        SegmentBomber bomber = GetComponent<SegmentBomber>();
+        if (bomber != null)
+        {
+            bomber.SetBaseColor(color);
+        }
     }
 }

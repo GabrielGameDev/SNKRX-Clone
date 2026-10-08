@@ -14,6 +14,9 @@ public class UIManager : MonoBehaviour
     [Tooltip("Referência para a barra de experiência no HUD.")]
     [SerializeField] private ExperienceBarUI experienceBar;
 
+    [Tooltip("Referência para o modal de escolha de upgrades.")]
+    [SerializeField] private UpgradeSelectionUI upgradeSelectionUI;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -23,6 +26,19 @@ public class UIManager : MonoBehaviour
         }
 
         Instance = this;
+
+        // Garante que o UpgradeManager e o UpgradeSelectionUI estejam instanciados e prontos
+        _ = UpgradeManager.Instance;
+
+        if (upgradeSelectionUI == null)
+        {
+            upgradeSelectionUI = FindAnyObjectByType<UpgradeSelectionUI>();
+            if (upgradeSelectionUI == null)
+            {
+                GameObject upgradeUiGo = new GameObject("UpgradeSelectionUI");
+                upgradeSelectionUI = upgradeUiGo.AddComponent<UpgradeSelectionUI>();
+            }
+        }
     }
 
     private void OnEnable()

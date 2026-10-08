@@ -29,6 +29,7 @@ public class SegmentShooter : MonoBehaviour
 
     public float FireInterval { get => fireInterval; set => fireInterval = Mathf.Max(0.05f, value); }
     public float AttackRange { get => attackRange; set => attackRange = value; }
+    public float EffectiveAttackRange => attackRange * (UpgradeManager.Instance != null ? UpgradeManager.Instance.RangeMultiplier : 1f);
 
     private void Awake()
     {
@@ -76,7 +77,11 @@ public class SegmentShooter : MonoBehaviour
             float angle = Mathf.Atan2(direction.y, direction.x) * Mathf.Rad2Deg - 90f;
             Quaternion rotation = Quaternion.Euler(0f, 0f, angle);
 
-            Instantiate(projectilePrefab, spawnPosition, rotation);
+            Projectile proj = Instantiate(projectilePrefab, spawnPosition, rotation);
+            if (proj != null && UpgradeManager.Instance != null)
+            {
+                proj.Damage *= UpgradeManager.Instance.GlobalDamageMultiplier;
+            }
 
             // Reinicia o tempo para o próximo disparo
             fireTimer = fireInterval;
@@ -93,7 +98,8 @@ public class SegmentShooter : MonoBehaviour
 
         Vector2 origin = firePoint != null ? (Vector2)firePoint.position : (Vector2)transform.position;
         EnemyHealth nearest = null;
-        float shortestDistanceSqr = (attackRange > 0f) ? (attackRange * attackRange) : float.MaxValue;
+        float currentRange = EffectiveAttackRange;
+        float shortestDistanceSqr = (currentRange > 0f) ? (currentRange * currentRange) : float.MaxValue;
 
         for (int i = 0; i < enemies.Count; i++)
         {

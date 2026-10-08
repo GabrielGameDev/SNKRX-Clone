@@ -21,6 +21,25 @@ public class XpPickup : MonoBehaviour
         experienceAmount = Mathf.Max(1, amount);
     }
 
+    private void Update()
+    {
+        if (collected) return;
+        if (UpgradeManager.Instance == null || UpgradeManager.Instance.MagnetRadius <= 0f) return;
+        if (SnakeMovement.Instance == null) return;
+
+        Vector3 headPos = SnakeMovement.Instance.HeadPosition;
+        float distSqr = (headPos - transform.position).sqrMagnitude;
+        float radius = UpgradeManager.Instance.MagnetRadius;
+
+        if (distSqr <= radius * radius)
+        {
+            float speed = UpgradeManager.Instance.MagnetPullSpeed;
+            float dist = Mathf.Sqrt(distSqr);
+            float currentSpeed = Mathf.Max(speed, speed * (1f + (radius - dist) * 0.5f));
+            transform.position = Vector3.MoveTowards(transform.position, headPos, currentSpeed * Time.deltaTime);
+        }
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (collected) return;

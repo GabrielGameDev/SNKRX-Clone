@@ -116,6 +116,10 @@ public class SnakeMovement : MonoBehaviour
         }
 
         rb2d = GetComponent<Rigidbody2D>();
+        if (rb2d != null)
+        {
+            rb2d.interpolation = RigidbodyInterpolation2D.Interpolate;
+        }
 
         if (targetCamera == null)
         {
@@ -140,7 +144,7 @@ public class SnakeMovement : MonoBehaviour
         SpawnInitialSegments();
     }
 
-    private void Update()
+    private void FixedUpdate()
     {
         UpdateBoundsData();
         HandleSteering();
@@ -305,8 +309,17 @@ public class SnakeMovement : MonoBehaviour
         {
             // Input positivo (D / Seta Direita) gira no sentido horário (-Z)
             // Input negativo (A / Seta Esquerda) gira no sentido anti-horário (+Z)
-            float rotationAmount = -steerInput * steerSpeed * Time.deltaTime;
-            transform.Rotate(0f, 0f, rotationAmount);
+            float rotationAmount = -steerInput * steerSpeed * Time.fixedDeltaTime;
+            float currentAngle = rb2d != null ? rb2d.rotation : transform.eulerAngles.z;
+            float nextAngle = currentAngle + rotationAmount;
+            if (rb2d != null)
+            {
+                rb2d.MoveRotation(nextAngle);
+            }
+            else
+            {
+                transform.rotation = Quaternion.Euler(0f, 0f, nextAngle);
+            }
         }
     }
 
@@ -316,19 +329,23 @@ public class SnakeMovement : MonoBehaviour
     /// </summary>
     private void HandleForwardMovement()
     {
-        transform.position += transform.up * (moveSpeed * Time.deltaTime);
+        Vector2 currentPosition = rb2d != null ? rb2d.position : (Vector2)transform.position;
+        float angle = rb2d != null ? rb2d.rotation : transform.eulerAngles.z;
+        Vector2 forward = Quaternion.Euler(0f, 0f, angle) * Vector2.up;
+        Vector3 nextPosition = currentPosition + (forward * (moveSpeed * Time.fixedDeltaTime));
 
         if (enableWrap)
         {
-            Vector3 wrappedPos = WrapPosition(transform.position);
-            if (wrappedPos != transform.position)
-            {
-                transform.position = wrappedPos;
-                if (rb2d != null)
-                {
-                    rb2d.position = wrappedPos;
-                }
-            }
+            nextPosition = WrapPosition(nextPosition);
+        }
+
+        if (rb2d != null)
+        {
+            rb2d.MovePosition(nextPosition);
+        }
+        else
+        {
+            transform.position = nextPosition;
         }
     }
 
@@ -344,16 +361,20 @@ public class SnakeMovement : MonoBehaviour
             return;
         }
 
-        float distFromFirst = GetToroidalDistance(pathHistory[0].position, transform.position);
+        Vector3 headPosition = rb2d != null ? (Vector3)rb2d.position : transform.position;
+        Quaternion headRotation = rb2d != null
+            ? Quaternion.Euler(0f, 0f, rb2d.rotation)
+            : transform.rotation;
+        float distFromFirst = GetToroidalDistance(pathHistory[0].position, headPosition);
 
         if (distFromFirst >= minRecordDistance)
         {
-            pathHistory.Insert(0, new PathPoint(transform.position, transform.rotation));
+            pathHistory.Insert(0, new PathPoint(headPosition, headRotation));
         }
         else
         {
             // Atualiza o primeiro ponto para a posição exata da cabeça a cada frame
-            pathHistory[0] = new PathPoint(transform.position, transform.rotation);
+            pathHistory[0] = new PathPoint(headPosition, headRotation);
         }
     }
 
@@ -367,6 +388,7 @@ public class SnakeMovement : MonoBehaviour
         if (segments.Count == 0 || pathHistory.Count < 2) return;
 
         int currentSegmentIdx = 0;
+        int placedCount = 0;
         float targetDistance = segmentSpacing;
         float accumulatedDistance = 0f;
 
@@ -397,6 +419,7 @@ public class SnakeMovement : MonoBehaviour
                 segments[currentSegmentIdx].UpdatePositionAndRotation(targetPos, targetRot);
 
                 currentSegmentIdx++;
+                placedCount++;
                 lastUsedPointIndex = i + 1;
 
                 if (currentSegmentIdx >= segments.Count)
@@ -424,33 +447,103 @@ public class SnakeMovement : MonoBehaviour
             currentSegmentIdx++;
         }
 
-        // Otimização: remove pontos antigos da lista que estão muito além do último segmento
-        int safeBuffer = 5;
-        int trimIndex = lastUsedPointIndex + safeBuffer;
-        if (trimIndex < pathHistory.Count - 1)
+        // Otimização: remove pontos antigos da lista SOMENTE se todos os segmentos tiverem sido posicionados
+        // e mantém uma margem de segurança generosa para acomodar novos segmentos e curvas.
+        // Nunca remove pontos se algum segmento ainda não couber na trilha!
+        if (placedCount >= segments.Count && lastUsedPointIndex > 0)
         {
-            pathHistory.RemoveRange(trimIndex, pathHistory.Count - trimIndex);
+            int safeBuffer = Mathf.CeilToInt((segmentSpacing * 3f) / minRecordDistance);
+            int trimIndex = lastUsedPointIndex + safeBuffer;
+            if (trimIndex < pathHistory.Count - 1)
+            {
+                pathHistory.RemoveRange(trimIndex, pathHistory.Count - trimIndex);
+            }
         }
     }
 
     /// <summary>
-    /// Adiciona um novo segmento ao final da cobra.
+    /// Garante que o histórico da trilha tenha comprimento suficiente para posicionar todos os segmentos.
+    /// Chamado ao adicionar novos segmentos à cobra em tempo de execução.
+    /// </summary>
+    private void EnsurePathCapacityForSegments()
+    {
+        if (pathHistory.Count < 2) return;
+
+        float currentLength = 0f;
+        for (int i = 0; i < pathHistory.Count - 1; i++)
+        {
+            currentLength += GetToroidalDelta(pathHistory[i].position, pathHistory[i + 1].position).magnitude;
+        }
+
+        float requiredLength = (segments.Count + 3) * segmentSpacing;
+        if (currentLength < requiredLength)
+        {
+            float deficit = requiredLength - currentLength;
+            int steps = Mathf.CeilToInt(deficit / minRecordDistance);
+
+            PathPoint lastPt = pathHistory[pathHistory.Count - 1];
+            PathPoint prevPt = pathHistory[pathHistory.Count - 2];
+            Vector3 dir = GetToroidalDelta(prevPt.position, lastPt.position).normalized;
+            if (dir.sqrMagnitude < 0.001f)
+            {
+                dir = -(lastPt.rotation * Vector3.up);
+            }
+
+            Vector3 currentPos = lastPt.position;
+            for (int s = 0; s < steps; s++)
+            {
+                currentPos += dir * minRecordDistance;
+                if (enableWrap)
+                {
+                    currentPos = WrapPosition(currentPos);
+                }
+                pathHistory.Add(new PathPoint(currentPos, lastPt.rotation));
+            }
+        }
+    }
+
+    /// <summary>
+    /// Adiciona um novo segmento padrão ao final da cobra.
     /// </summary>
     public SnakeSegment AddSegment()
+    {
+        return AddSegment(segmentPrefab, null);
+    }
+
+    /// <summary>
+    /// Adiciona um segmento com prefab específico e cor personalizada ao final da cobra.
+    /// </summary>
+    public SnakeSegment AddSegment(SnakeSegment prefab, Color? segmentColor = null)
     {
         int newIndex = segments.Count;
         SnakeSegment newSegment;
 
-        Vector3 spawnPos = transform.position - (transform.up * ((newIndex + 1) * segmentSpacing));
-        if (enableWrap)
-        {
-            spawnPos = WrapPosition(spawnPos);
-        }
-        Quaternion spawnRot = transform.rotation;
+        EnsurePathCapacityForSegments();
 
-        if (segmentPrefab != null)
+        Vector3 spawnPos;
+        Quaternion spawnRot;
+
+        if (pathHistory.Count > 0)
         {
-            newSegment = Instantiate(segmentPrefab, spawnPos, spawnRot, transform.parent);
+            PathPoint tailPt = pathHistory[pathHistory.Count - 1];
+            spawnPos = tailPt.position;
+            spawnRot = tailPt.rotation;
+        }
+        else
+        {
+            spawnPos = transform.position - (transform.up * ((newIndex + 1) * segmentSpacing));
+            if (enableWrap)
+            {
+                spawnPos = WrapPosition(spawnPos);
+            }
+            spawnRot = transform.rotation;
+        }
+
+        SnakeSegment prefabToInstantiate = prefab != null ? prefab : segmentPrefab;
+
+        if (prefabToInstantiate != null)
+        {
+            newSegment = Instantiate(prefabToInstantiate, spawnPos, spawnRot, transform.parent);
         }
         else
         {
@@ -465,6 +558,21 @@ public class SnakeMovement : MonoBehaviour
         }
 
         newSegment.Initialize(newIndex, this);
+
+        if (segmentColor.HasValue)
+        {
+            newSegment.SetSegmentColor(segmentColor.Value);
+        }
+
+        if (UpgradeManager.Instance != null && UpgradeManager.Instance.BonusMaxHealth > 0f)
+        {
+            SegmentHealth health = newSegment.GetComponent<SegmentHealth>();
+            if (health != null)
+            {
+                health.IncreaseMaxHealth(UpgradeManager.Instance.BonusMaxHealth, true);
+            }
+        }
+
         segments.Add(newSegment);
         return newSegment;
     }
