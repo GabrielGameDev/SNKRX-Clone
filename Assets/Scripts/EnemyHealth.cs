@@ -39,6 +39,17 @@ public class EnemyHealth : MonoBehaviour
         CurrentHealth = maxHealth;
     }
 
+    /// <summary>
+    /// Ajusta a vida máxima do inimigo (usado por ondas progressivas).
+    /// Deve ser chamado após o Awake, imediatamente após o Instantiate.
+    /// </summary>
+    public void SetMaxHealth(float newMax)
+    {
+        maxHealth = newMax;
+        CurrentHealth = newMax;
+        OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
+    }
+
     protected virtual void OnEnable()
     {
         if (!AllEnemies.Contains(this))

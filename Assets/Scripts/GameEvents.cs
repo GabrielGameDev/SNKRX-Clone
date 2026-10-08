@@ -22,6 +22,31 @@ public static class GameEvents
     /// Disparado quando a cabeça da cobra é derrotada.
     /// </summary>
     public static event Action OnPlayerDied;
+    // Nova API de ondas
+    /// <summary>
+    /// Disparado quando uma nova onda começa. Parâmetro: número da onda (1‑based).
+    /// </summary>
+    public static event Action<int> OnWaveStarted;
+    /// <summary>
+    /// Disparado quando todos os inimigos da onda atual morrem.
+    /// </summary>
+    public static event Action<int> OnWaveCompleted;
+
+    /// <summary>
+    /// Helper para disparar o evento de início de onda.
+    /// </summary>
+    public static void TriggerWaveStarted(int wave)
+    {
+        OnWaveStarted?.Invoke(wave);
+    }
+
+    /// <summary>
+    /// Helper para disparar o evento de final de onda.
+    /// </summary>
+    public static void TriggerWaveCompleted(int wave)
+    {
+        OnWaveCompleted?.Invoke(wave);
+    }
 
     public static void TriggerExperienceChanged(int currentXp, int xpToNextLevel, int currentLevel)
     {
