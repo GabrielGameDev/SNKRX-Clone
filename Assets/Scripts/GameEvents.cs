@@ -18,6 +18,11 @@ public static class GameEvents
     /// </summary>
     public static event Action<int> OnLevelUp;
 
+    /// <summary>
+    /// Disparado quando a cabeça da cobra é derrotada.
+    /// </summary>
+    public static event Action OnPlayerDied;
+
     public static void TriggerExperienceChanged(int currentXp, int xpToNextLevel, int currentLevel)
     {
         OnExperienceChanged?.Invoke(currentXp, xpToNextLevel, currentLevel);
@@ -26,5 +31,10 @@ public static class GameEvents
     public static void TriggerLevelUp(int newLevel)
     {
         OnLevelUp?.Invoke(newLevel);
+    }
+
+    public static void TriggerPlayerDied()
+    {
+        OnPlayerDied?.Invoke();
     }
 }

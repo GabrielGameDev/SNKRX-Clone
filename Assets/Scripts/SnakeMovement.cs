@@ -88,7 +88,10 @@ public class SnakeMovement : MonoBehaviour
     private Vector2 currentEffectiveSize;
     private Rigidbody2D rb2d;
 
+    public static SnakeMovement Instance { get; private set; }
+
     public IReadOnlyList<SnakeSegment> Segments => segments;
+    public Vector3 HeadPosition => transform.position;
     public float MoveSpeed { get => moveSpeed; set => moveSpeed = value; }
     public float SteerSpeed { get => steerSpeed; set => steerSpeed = value; }
     public float SegmentSpacing { get => segmentSpacing; set => segmentSpacing = Mathf.Max(0.1f, value); }
@@ -100,6 +103,13 @@ public class SnakeMovement : MonoBehaviour
 
     private void Awake()
     {
+        if (Instance != null && Instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
+        Instance = this;
+
         if (inputController == null)
         {
             inputController = GetComponent<InputController>();
@@ -113,6 +123,14 @@ public class SnakeMovement : MonoBehaviour
         }
 
         UpdateBoundsData();
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            Instance = null;
+        }
     }
 
     private void Start()
@@ -474,6 +492,45 @@ public class SnakeMovement : MonoBehaviour
                 segments[i].SetIndex(i);
             }
         }
+    }
+
+    /// <summary>
+    /// Remove um segmento específico a partir de sua instância.
+    /// O corpo da cobra se reajusta automaticamente nos frames seguintes.
+    /// </summary>
+    public void RemoveSegment(SnakeSegment segment)
+    {
+        if (segment == null) return;
+        int index = segments.IndexOf(segment);
+        if (index >= 0)
+        {
+            RemoveSegment(index);
+        }
+    }
+
+    /// <summary>
+    /// Retorna a posição mais próxima da cobra (cabeça ou segmento) em relação a um ponto do cenário.
+    /// </summary>
+    public Vector3 GetNearestTargetPosition(Vector3 fromPosition)
+    {
+        Vector3 nearest = transform.position;
+        float shortestDistSqr = (transform.position - fromPosition).sqrMagnitude;
+
+        for (int i = 0; i < segments.Count; i++)
+        {
+            if (segments[i] != null)
+            {
+                Vector3 segPos = segments[i].transform.position;
+                float distSqr = (segPos - fromPosition).sqrMagnitude;
+                if (distSqr < shortestDistSqr)
+                {
+                    shortestDistSqr = distSqr;
+                    nearest = segPos;
+                }
+            }
+        }
+
+        return nearest;
     }
 
     /// <summary>

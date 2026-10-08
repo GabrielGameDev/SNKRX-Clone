@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 5281061173374585788}
   - component: {fileID: 5814841126572940815}
   - component: {fileID: 2822775827379824794}
+  - component: {fileID: 8291047192849182371}
   m_Layer: 0
   m_Name: Enemy
   m_TagString: Untagged
@@ -153,5 +154,22 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EnemyHealth
   maxHealth: 2
-  xpPickupPrefab: {fileID: 0}
+  xpPickupPrefab: {fileID: 7655408179083036505, guid: abda291cfa27eee4c979b8e55c2ebed8, type: 3}
   xpDropAmount: 1
+--- !u!114 &8291047192849182371
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 374091671150669072}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 586cbeadfbaa4f396b08f15f30b2fa79, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::EnemyWanderer
+  speed: 1.8
+  edgeMargin: 0.6
+  directionChangeInterval: 3.5
+  contactDamage: 1
+
