@@ -31,6 +31,8 @@ public static class GameEvents
     /// Disparado quando todos os inimigos da onda atual morrem.
     /// </summary>
     public static event Action<int> OnWaveCompleted;
+    public static event Action<float> OnPlayerDamageReceived;
+    public static event Action<EnemyHealth> OnEnemyKilled;
 
     /// <summary>
     /// Helper para disparar o evento de início de onda.
@@ -61,5 +63,15 @@ public static class GameEvents
     public static void TriggerPlayerDied()
     {
         OnPlayerDied?.Invoke();
+    }
+
+    public static void TriggerPlayerDamageReceived(float amount)
+    {
+        OnPlayerDamageReceived?.Invoke(amount);
+    }
+
+    public static void TriggerEnemyKilled(EnemyHealth enemy)
+    {
+        OnEnemyKilled?.Invoke(enemy);
     }
 }

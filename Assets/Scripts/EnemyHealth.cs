@@ -111,6 +111,7 @@ public class EnemyHealth : MonoBehaviour
     protected virtual void Die()
     {
         OnDeath?.Invoke();
+        GameEvents.TriggerEnemyKilled(this);
 
         if (xpPickupPrefab != null)
         {

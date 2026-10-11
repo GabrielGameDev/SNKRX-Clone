@@ -166,8 +166,10 @@ public class SegmentHealth : MonoBehaviour
     {
         if (IsDead || invulnerabilityTimer > 0f) return;
 
+        float previousHealth = currentHealth;
         currentHealth = Mathf.Max(0f, currentHealth - amount);
         invulnerabilityTimer = invulnerabilityDuration;
+        GameEvents.TriggerPlayerDamageReceived(previousHealth - currentHealth);
 
         OnHealthChanged?.Invoke(currentHealth, maxHealth);
 
