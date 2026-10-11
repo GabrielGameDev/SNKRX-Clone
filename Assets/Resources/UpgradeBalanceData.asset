@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1148c18436414f06ada81f526cf079b4, type: 3}
+  m_Name: UpgradeBalanceData
+  m_EditorClassIdentifier: 
+  globalDamageMultiplier: 1
+  rangeMultiplier: 1
+  baseSegmentHealth: 3
+  baseMagnetRadius: 2
+  baseMagnetPullSpeed: 7
+  upgrades:
+  - type: 0
+    displayName: Automatic Fire
+    description: Adds a Shooter Snake segment that continuously fires at the nearest enemy.
+    amount: 0
+  - type: 1
+    displayName: Global Damage & Explosion
+    description: Increases damage from all sources by +25% and adds an Explosion Snake segment that periodically deals area damage.
+    amount: 0.25
+  - type: 2
+    displayName: Extended Range
+    description: Increases shooters' attack range and explosion radius by +20%, and adds a segment to the body.
+    amount: 0.2
+  - type: 3
+    displayName: Segment Vitality
+    description: Increases segment maximum health by +1.5 HP, heals the snake, and adds a segment to the body.
+    amount: 1.5
+  - type: 4
+    displayName: Snake Speed
+    description: Increases the snake's movement speed by +15% and adds a segment to the body.
+    amount: 0.15
+  - type: 5
+    displayName: XP Magnet
+    description: Increases the pickup radius for experience orbs by +1 and adds a segment to the body.
+    amount: 1

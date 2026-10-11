@@ -274,7 +274,7 @@ namespace SNKRX.Editor
             descRt.sizeDelta = new Vector2(210f, 100f);
             TextMeshProUGUI descText = descGo.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) descText.font = fontAsset;
-            descText.text = $"Efeito Misterioso!\n\nEscolha para desvendar este poder nesta run e criar uma bolinha {colorName.ToLower()} no corpo da cobra.";
+            descText.text = $"Mysterious Effect!\n\nChoose this upgrade to reveal its power for this run and add a {colorName.ToLower()} segment to the snake.";
             descText.fontSize = 13;
             descText.lineSpacing = 5f;
             descText.color = new Color(0.85f, 0.85f, 0.9f);

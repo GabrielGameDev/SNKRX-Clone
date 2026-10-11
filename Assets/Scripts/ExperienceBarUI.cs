@@ -9,7 +9,7 @@ using UnityEngine.UI;
 public class ExperienceBarUI : MonoBehaviour
 {
     [Header("Elementos Visuais")]
-    [Tooltip("Imagem da barra com Image Type configurado como Filled.")]
+    [Tooltip("Imagem da barra. O preenchimento é controlado pela escala X do RectTransform; o sprite é opcional.")]
     [SerializeField] private Image fillImage;
 
     [Tooltip("Texto opcional para exibir o nível atual (ex: 'LV 1').")]
@@ -27,6 +27,7 @@ public class ExperienceBarUI : MonoBehaviour
     [SerializeField] private float fillSpeed = 12f;
 
     private float targetFillAmount = 0f;
+    private RectTransform fillRect;
     private int lastLevel = 1;
     private bool isInitialized = false;
 
@@ -34,7 +35,8 @@ public class ExperienceBarUI : MonoBehaviour
     {
         if (fillImage != null)
         {
-            fillImage.fillAmount = 0f;
+            fillRect = fillImage.rectTransform;
+            SetFillScale(0f);
         }
     }
 
@@ -42,13 +44,16 @@ public class ExperienceBarUI : MonoBehaviour
     {
         if (fillImage == null) return;
 
-        if (Mathf.Abs(fillImage.fillAmount - targetFillAmount) > 0.001f)
+        if (fillRect == null) return;
+
+        float currentFill = fillRect.localScale.x;
+        if (Mathf.Abs(currentFill - targetFillAmount) > 0.001f)
         {
-            fillImage.fillAmount = Mathf.MoveTowards(fillImage.fillAmount, targetFillAmount, fillSpeed * Time.deltaTime);
+            SetFillScale(Mathf.MoveTowards(currentFill, targetFillAmount, fillSpeed * Time.deltaTime));
         }
         else
         {
-            fillImage.fillAmount = targetFillAmount;
+            SetFillScale(targetFillAmount);
         }
     }
 
@@ -64,7 +69,7 @@ public class ExperienceBarUI : MonoBehaviour
         {
             if (fillImage != null)
             {
-                fillImage.fillAmount = 0f;
+                SetFillScale(0f);
             }
         }
 
@@ -73,11 +78,19 @@ public class ExperienceBarUI : MonoBehaviour
 
         if (!isInitialized && fillImage != null)
         {
-            fillImage.fillAmount = ratio;
+            SetFillScale(ratio);
             isInitialized = true;
         }
 
         UpdateTexts(currentXp, xpToNextLevel, currentLevel);
+    }
+
+    private void SetFillScale(float ratio)
+    {
+        if (fillRect == null) return;
+        Vector3 scale = fillRect.localScale;
+        scale.x = Mathf.Clamp01(ratio);
+        fillRect.localScale = scale;
     }
 
     /// <summary>

@@ -31,6 +31,7 @@ public class UpgradeManager : MonoBehaviour
     }
 
     [Header("Prefabs dos Segmentos")]
+    [SerializeField] private UpgradeBalanceData balanceData;
     [Tooltip("Prefab do segmento atirador (Shooter Snake).")]
     [SerializeField] private SnakeSegment shooterSegmentPrefab;
 
@@ -39,10 +40,6 @@ public class UpgradeManager : MonoBehaviour
 
     [Tooltip("Prefab do segmento normal do corpo (Snake Segment).")]
     [SerializeField] private SnakeSegment defaultSegmentPrefab;
-
-    [Header("Valores Base de Stats")]
-    [SerializeField] private float baseMagnetRadius = 2.0f;
-    [SerializeField] private float baseMagnetPullSpeed = 7.0f;
 
     // Modificadores de gameplay acumulados na run
     public float GlobalDamageMultiplier { get; private set; } = 1.0f;
@@ -114,42 +111,15 @@ public class UpgradeManager : MonoBehaviour
     private void InitializeUpgradesData()
     {
         upgrades.Clear();
-
-        upgrades[UpgradeType.Shooter] = new RunUpgradeState(
-            UpgradeType.Shooter,
-            "Tiro Automático",
-            "Cria um novo segmento Shooter Snake que dispara continuamente contra o inimigo mais próximo."
-        );
-
-        upgrades[UpgradeType.Damage] = new RunUpgradeState(
-            UpgradeType.Damage,
-            "Dano Global & Explosão",
-            "Aumenta o dano de todas as fontes em +25% e cria um segmento Explosion Snake que explode em área periodicamente."
-        );
-
-        upgrades[UpgradeType.Range] = new RunUpgradeState(
-            UpgradeType.Range,
-            "Alcance Ampliado",
-            "Aumenta o alcance de ataque dos atiradores e o raio das explosões em +20% e adiciona uma bolinha ao corpo."
-        );
-
-        upgrades[UpgradeType.Health] = new RunUpgradeState(
-            UpgradeType.Health,
-            "Vitalidade dos Segmentos",
-            "Aumenta a vida máxima dos segmentos em +1.5 HP, cura a cobra e adiciona uma bolinha ao corpo."
-        );
-
-        upgrades[UpgradeType.Speed] = new RunUpgradeState(
-            UpgradeType.Speed,
-            "Velocidade da Cobra",
-            "Aumenta a velocidade de movimento da cobra em +15% e adiciona uma bolinha ao corpo."
-        );
-
-        upgrades[UpgradeType.Magnet] = new RunUpgradeState(
-            UpgradeType.Magnet,
-            "Ímã de XP",
-            "Aumenta o raio de atração para coletar orbes de experiência em +3.0 metros e adiciona uma bolinha ao corpo."
-        );
+        if (balanceData == null) balanceData = Resources.Load<UpgradeBalanceData>("UpgradeBalanceData");
+        if (balanceData != null)
+        {
+            foreach (var definition in balanceData.upgrades)
+                upgrades[definition.type] = new RunUpgradeState(definition.type, definition.displayName, definition.description);
+        }
+        // Mantém os upgrades ausentes no asset disponíveis com conteúdo básico.
+        foreach (UpgradeType type in Enum.GetValues(typeof(UpgradeType)))
+            if (!upgrades.ContainsKey(type)) upgrades[type] = new RunUpgradeState(type, type.ToString(), string.Empty);
     }
 
     /// <summary>
@@ -158,11 +128,11 @@ public class UpgradeManager : MonoBehaviour
     /// </summary>
     public void StartNewRun()
     {
-        GlobalDamageMultiplier = 1.0f;
-        RangeMultiplier = 1.0f;
+        GlobalDamageMultiplier = balanceData != null ? balanceData.globalDamageMultiplier : 1.0f;
+        RangeMultiplier = balanceData != null ? balanceData.rangeMultiplier : 1.0f;
         BonusMaxHealth = 0.0f;
-        MagnetRadius = baseMagnetRadius;
-        MagnetPullSpeed = baseMagnetPullSpeed;
+        MagnetRadius = balanceData != null ? balanceData.baseMagnetRadius : 2f;
+        MagnetPullSpeed = balanceData != null ? balanceData.baseMagnetPullSpeed : 7f;
 
         // Embaralha uma cópia da paleta de cores (Fisher-Yates)
         List<UpgradeColorInfo> shuffledColors = new List<UpgradeColorInfo>(palette);
@@ -245,7 +215,7 @@ public class UpgradeManager : MonoBehaviour
                 break;
 
             case UpgradeType.Damage:
-                GlobalDamageMultiplier += 0.25f;
+                GlobalDamageMultiplier += GetUpgradeAmount(type, 0.25f);
                 if (snake != null)
                 {
                     snake.AddSegment(explosionSegmentPrefab, segmentColor);
@@ -253,7 +223,7 @@ public class UpgradeManager : MonoBehaviour
                 break;
 
             case UpgradeType.Range:
-                RangeMultiplier += 0.20f;
+                RangeMultiplier += GetUpgradeAmount(type, 0.20f);
                 if (snake != null)
                 {
                     snake.AddSegment(defaultSegmentPrefab, segmentColor);
@@ -261,14 +231,15 @@ public class UpgradeManager : MonoBehaviour
                 break;
 
             case UpgradeType.Health:
-                BonusMaxHealth += 1.5f;
+                float healthBonus = GetUpgradeAmount(type, 1.5f);
+                BonusMaxHealth += healthBonus;
                 // Aumenta a vida de todos os segmentos já existentes
                 if (snake != null)
                 {
                     var headHealth = snake.GetComponent<SegmentHealth>();
                     if (headHealth != null)
                     {
-                        headHealth.IncreaseMaxHealth(1.5f, true);
+                        headHealth.IncreaseMaxHealth(healthBonus, true);
                     }
 
                     for (int i = 0; i < snake.Segments.Count; i++)
@@ -276,7 +247,7 @@ public class UpgradeManager : MonoBehaviour
                         var segHealth = snake.Segments[i].GetComponent<SegmentHealth>();
                         if (segHealth != null)
                         {
-                            segHealth.IncreaseMaxHealth(1.5f, true);
+                            segHealth.IncreaseMaxHealth(healthBonus, true);
                         }
                     }
 
@@ -287,14 +258,14 @@ public class UpgradeManager : MonoBehaviour
             case UpgradeType.Speed:
                 if (snake != null)
                 {
-                    snake.MoveSpeed *= 1.15f;
+                    snake.MoveSpeed *= 1f + GetUpgradeAmount(type, 0.15f);
                     snake.AddSegment(defaultSegmentPrefab, segmentColor);
                 }
                 break;
 
             case UpgradeType.Magnet:
-                MagnetRadius += 3.0f;
-                MagnetPullSpeed += 2.0f;
+                MagnetRadius += GetUpgradeAmount(type, 3f);
+                MagnetPullSpeed += 2f;
                 if (snake != null)
                 {
                     snake.AddSegment(defaultSegmentPrefab, segmentColor);
@@ -303,5 +274,11 @@ public class UpgradeManager : MonoBehaviour
         }
 
         OnUpgradeApplied?.Invoke(state);
+    }
+
+    private float GetUpgradeAmount(UpgradeType type, float fallback)
+    {
+        var definition = balanceData != null ? balanceData.Get(type) : null;
+        return definition != null ? definition.amount : fallback;
     }
 }

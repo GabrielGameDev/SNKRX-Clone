@@ -133,7 +133,7 @@ public class UpgradeCardUI : MonoBehaviour
 
             if (descriptionText != null)
             {
-                descriptionText.text = $"Efeito Misterioso!\n\nEscolha para desvendar este poder nesta run e criar uma bolinha {colorName.ToLower()} no corpo da cobra.";
+                descriptionText.text = $"Mysterious Effect!\n\nChoose this upgrade to reveal its power for this run and add a {colorName.ToLower()} segment to the snake.";
             }
 
             if (statusBadgeText != null)
