@@ -168,6 +168,10 @@ public class SegmentHealth : MonoBehaviour
 
         float previousHealth = currentHealth;
         currentHealth = Mathf.Max(0f, currentHealth - amount);
+        if (currentHealth < previousHealth)
+        {
+            SfxPlayer.PlayHit();
+        }
         invulnerabilityTimer = invulnerabilityDuration;
         GameEvents.TriggerPlayerDamageReceived(previousHealth - currentHealth);
 
@@ -234,6 +238,11 @@ public class SegmentHealth : MonoBehaviour
     {
         ResetVisual();
         OnDeath?.Invoke();
+
+        if (!isHead)
+        {
+            SfxPlayer.PlayExplosion();
+        }
 
         if (isHead)
         {

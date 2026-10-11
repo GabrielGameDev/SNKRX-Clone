@@ -78,6 +78,7 @@ public class SegmentShooter : MonoBehaviour
             Quaternion rotation = Quaternion.Euler(0f, 0f, angle);
 
             Projectile proj = Instantiate(projectilePrefab, spawnPosition, rotation);
+            SfxPlayer.PlayGunfire();
             if (proj != null && UpgradeManager.Instance != null)
             {
                 proj.Damage *= UpgradeManager.Instance.GlobalDamageMultiplier;

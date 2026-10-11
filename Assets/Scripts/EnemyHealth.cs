@@ -96,7 +96,12 @@ public class EnemyHealth : MonoBehaviour
     {
         if (IsDead) return;
 
+        float previousHealth = CurrentHealth;
         CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+        if (CurrentHealth < previousHealth)
+        {
+            SfxPlayer.PlayHit();
+        }
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
 
         if (CurrentHealth <= 0f)
@@ -110,6 +115,7 @@ public class EnemyHealth : MonoBehaviour
     /// </summary>
     protected virtual void Die()
     {
+        SfxPlayer.PlayExplosion();
         OnDeath?.Invoke();
         GameEvents.TriggerEnemyKilled(this);
 

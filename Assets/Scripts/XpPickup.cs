@@ -60,6 +60,7 @@ public class XpPickup : MonoBehaviour
         if (playerExperience == null) return;
 
         collected = true;
+        SfxPlayer.PlayXpPickup();
         playerExperience.AddExperience(experienceAmount);
         Destroy(gameObject);
     }

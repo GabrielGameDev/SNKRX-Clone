@@ -124,6 +124,7 @@ public class UpgradeSelectionUI : MonoBehaviour
 
         isSelecting = true;
         isResolvingChoice = false;
+        SfxPlayer.PlayUpgrade();
         SetCardsInteractable(true);
         Time.timeScale = 0f; // Pausa o jogo durante a escolha
 

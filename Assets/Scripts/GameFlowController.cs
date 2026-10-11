@@ -106,6 +106,7 @@ public class GameFlowController : MonoBehaviour
     private void HandlePlayerDied()
     {
         if (state != ScreenState.Playing) return;
+        SfxPlayer.PlayGameOver();
         state = ScreenState.GameOver;
         Time.timeScale = 0f;
         ShowGameOver();
@@ -152,19 +153,6 @@ public class GameFlowController : MonoBehaviour
         int score = enemiesKilled * 100 + wavesCompleted * 500 + levelsGained * 250;
         int level = FindAnyObjectByType<PlayerExperience>()?.CurrentLevel ?? levelsGained + 1;
         int totalXp = FindAnyObjectByType<PlayerExperience>()?.TotalExperienceAcquired ?? 0;
-        int normalSegments = 0, shooterSegments = 0, bomberSegments = 0;
-        var snake = SnakeMovement.Instance;
-        if (snake != null)
-        {
-            foreach (var segment in snake.Segments)
-            {
-                if (segment == null) continue;
-                if (segment.GetComponent<SegmentShooter>() != null) shooterSegments++;
-                else if (segment.GetComponent<SegmentBomber>() != null) bomberSegments++;
-                else normalSegments++;
-            }
-        }
-
         gameOverTitleText.text = "Game Over";
         var summary = new StringBuilder();
         summary.AppendLine($"SCORE  {score:N0}                    TIME  {FormatTime(duration)}");
@@ -172,7 +160,7 @@ public class GameFlowController : MonoBehaviour
         summary.AppendLine($"Enemies defeated  {enemiesKilled}  (Wanderer {wanderersKilled} · Chaser {chasersKilled} · Kamikaze {kamikazesKilled} · Tank {tanksKilled})");
         summary.AppendLine($"Level  {level}  |  Levels gained  {levelsGained}  |  XP collected  {totalXp}");
         summary.AppendLine($"Damage received  {damageReceived:0.#}");
-        summary.AppendLine($"Segments remaining  {normalSegments + shooterSegments + bomberSegments}  (Normal {normalSegments} · Shooter {shooterSegments} · Bomber {bomberSegments})");
+        summary.AppendLine($"Upgrades unlocked  {FormatUpgradeCounts()}");
         summary.AppendLine();
         summary.Append("Score: 100 per enemy + 500 per completed wave + 250 per level gained");
         gameOverSummary = summary.ToString();
@@ -181,6 +169,19 @@ public class GameFlowController : MonoBehaviour
         restartPromptShown = false;
         titlePanel.SetActive(false);
         gameOverPanel.SetActive(true);
+    }
+
+    private static string FormatUpgradeCounts()
+    {
+        var manager = UpgradeManager.Instance;
+        var counts = new StringBuilder();
+        foreach (UpgradeType type in System.Enum.GetValues(typeof(UpgradeType)))
+        {
+            if (counts.Length > 0) counts.Append(" · ");
+            int count = manager != null ? manager.GetUpgradeState(type)?.Level ?? 0 : 0;
+            counts.Append($"{type} {count}");
+        }
+        return counts.ToString();
     }
 
     private static string FormatTime(float seconds)

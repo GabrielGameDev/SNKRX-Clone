@@ -138,6 +138,7 @@ public class EnemyKamikaze : MonoBehaviour
     {
         if (currentState == State.Exploded) return;
         currentState = State.Exploded;
+        SfxPlayer.PlayExplosion();
 
         // Efeito visual
         if (explosionEffectPrefab != null)
