@@ -1,4 +1,6 @@
 using System.Text;
+using System;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -28,6 +30,10 @@ public class GameFlowController : MonoBehaviour
     private int tanksKilled;
     private int levelsGained;
     private float damageReceived;
+    private float shooterDamageDealt;
+    private float bomberDamageDealt;
+    private int currentWave;
+    private string runId;
     private float runStartTime;
     private float restartPromptAvailableAt;
     private string gameOverSummary;
@@ -48,6 +54,8 @@ public class GameFlowController : MonoBehaviour
         GameEvents.OnLevelUp += HandleLevelUp;
         GameEvents.OnPlayerDamageReceived += HandlePlayerDamage;
         GameEvents.OnEnemyKilled += HandleEnemyKilled;
+        GameEvents.OnSegmentDamageDealt += HandleSegmentDamageDealt;
+        UpgradeManager.OnUpgradeApplied += HandleUpgradeApplied;
     }
 
     private void OnDisable()
@@ -58,6 +66,8 @@ public class GameFlowController : MonoBehaviour
         GameEvents.OnLevelUp -= HandleLevelUp;
         GameEvents.OnPlayerDamageReceived -= HandlePlayerDamage;
         GameEvents.OnEnemyKilled -= HandleEnemyKilled;
+        GameEvents.OnSegmentDamageDealt -= HandleSegmentDamageDealt;
+        UpgradeManager.OnUpgradeApplied -= HandleUpgradeApplied;
     }
 
     private void Update()
@@ -79,6 +89,9 @@ public class GameFlowController : MonoBehaviour
             state = ScreenState.Playing;
             MusicAudioController.SetGameplayState();
             runStartTime = Time.unscaledTime;
+            runId = Guid.NewGuid().ToString("N");
+            GameAnalyticsReporter.SetRunId(runId);
+            RecordRunEvent("run_started", new Dictionary<string, object>());
             titlePanel.SetActive(false);
             Time.timeScale = 1f;
         }
@@ -114,10 +127,41 @@ public class GameFlowController : MonoBehaviour
         ShowGameOver();
     }
 
-    private void HandleWaveStarted(int wave) => highestWave = Mathf.Max(highestWave, wave);
-    private void HandleWaveCompleted(int wave) => wavesCompleted++;
+    private void HandleWaveStarted(int wave)
+    {
+        currentWave = wave;
+        highestWave = Mathf.Max(highestWave, wave);
+        if (state == ScreenState.Playing)
+            RecordRunEvent("wave_started", new Dictionary<string, object> { { "wave", wave } });
+    }
+
+    private void HandleWaveCompleted(int wave)
+    {
+        wavesCompleted++;
+        if (state == ScreenState.Playing)
+            RecordRunEvent("wave_completed", new Dictionary<string, object> { { "wave", wave } });
+    }
+
     private void HandleLevelUp(int level) => levelsGained++;
     private void HandlePlayerDamage(float amount) => damageReceived += Mathf.Max(0f, amount);
+
+    private void HandleUpgradeApplied(RunUpgradeState upgrade)
+    {
+        if (state != ScreenState.Playing || upgrade == null) return;
+        RecordRunEvent("upgrade_selected", new Dictionary<string, object>
+        {
+            { "upgrade_type", upgrade.Type.ToString().ToLowerInvariant() },
+            { "upgrade_levelNew", upgrade.Level },
+            { "wave", currentWave }
+        });
+    }
+
+    private void HandleSegmentDamageDealt(string sourceType, float amount)
+    {
+        if (state != ScreenState.Playing || amount <= 0f) return;
+        if (sourceType == "shooter") shooterDamageDealt += amount;
+        else if (sourceType == "bomber") bomberDamageDealt += amount;
+    }
 
     private void ResetRunStats()
     {
@@ -130,7 +174,12 @@ public class GameFlowController : MonoBehaviour
         tanksKilled = 0;
         levelsGained = 0;
         damageReceived = 0f;
+        shooterDamageDealt = 0f;
+        bomberDamageDealt = 0f;
+        currentWave = 0;
         runStartTime = 0f;
+        runId = null;
+        GameAnalyticsReporter.SetRunId(null);
     }
 
     private void HandleEnemyKilled(EnemyHealth enemy)
@@ -157,6 +206,31 @@ public class GameFlowController : MonoBehaviour
         int score = enemiesKilled * 100 + wavesCompleted * 500 + levelsGained * 250;
         int level = FindAnyObjectByType<PlayerExperience>()?.CurrentLevel ?? levelsGained + 1;
         int totalXp = FindAnyObjectByType<PlayerExperience>()?.TotalExperienceAcquired ?? 0;
+        RecordRunEvent("run_ended", new Dictionary<string, object>
+        {
+            { "duration_seconds", duration },
+            { "score", score },
+            { "highest_wave", highestWave },
+            { "waves_completed", wavesCompleted },
+            { "player_level", level },
+            { "levels_gained", levelsGained },
+            { "xp_collected", totalXp },
+            { "enemies_killed", enemiesKilled },
+            { "wanderers_killed", wanderersKilled },
+            { "chasers_killed", chasersKilled },
+            { "kamikazes_killed", kamikazesKilled },
+            { "tanks_killed", tanksKilled },
+            { "damage_received", damageReceived },
+            { "shooter_damage", shooterDamageDealt },
+            { "bomber_damage", bomberDamageDealt },
+            { "upgrade_shooter", GetUpgradeLevel(UpgradeType.Shooter) },
+            { "upgrade_damage", GetUpgradeLevel(UpgradeType.Damage) },
+            { "upgrade_range", GetUpgradeLevel(UpgradeType.Range) },
+            { "upgrade_health", GetUpgradeLevel(UpgradeType.Health) },
+            { "upgrade_speed", GetUpgradeLevel(UpgradeType.Speed) },
+            { "upgrade_magnet", GetUpgradeLevel(UpgradeType.Magnet) }
+        });
+        GameAnalyticsReporter.Flush();
         gameOverTitleText.text = "Game Over";
         var summary = new StringBuilder();
         summary.AppendLine($"SCORE  {score:N0}                    TIME  {FormatTime(duration)}");
@@ -173,6 +247,14 @@ public class GameFlowController : MonoBehaviour
         restartPromptShown = false;
         titlePanel.SetActive(false);
         gameOverPanel.SetActive(true);
+    }
+
+    private int GetUpgradeLevel(UpgradeType type) => UpgradeManager.Instance?.GetUpgradeState(type)?.Level ?? 0;
+
+    private void RecordRunEvent(string eventName, Dictionary<string, object> parameters)
+    {
+        parameters["run_id"] = runId ?? string.Empty;
+        GameAnalyticsReporter.Record(eventName, parameters);
     }
 
     private static string FormatUpgradeCounts()

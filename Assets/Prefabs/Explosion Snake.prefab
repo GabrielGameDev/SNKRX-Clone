@@ -188,13 +188,14 @@ MonoBehaviour:
   maxHealth: 3
   isHead: 0
   invulnerabilityDuration: 1
+  collisionDamage: 1
   spriteRenderer: {fileID: 79074488900445090}
   hitFlashColor: {r: 1, g: 0.3, b: 0.3, a: 1}
-  deathEffectPrefab: {fileID: 5395415390795755325, guid: 3b77e04f6b824a92966ce7a5a6c4b7dd, type: 3}
   blinkInterval: 0.08
   invulnerableAlpha: 0.3
   healthBar: {fileID: 0}
   autoCreateHealthBar: 1
+  deathEffectPrefab: {fileID: 5395415390795755325, guid: 3b77e04f6b824a92966ce7a5a6c4b7dd, type: 3}
 --- !u!114 &6902465383722765025
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -208,7 +209,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SegmentBomber
   explosionInterval: 3
-  explosionRadius: 2
+  explosionRadius: 3
   explosionDamage: 2
   explosionEffectPrefab: {fileID: 5395415390795755325, guid: e9a5a14834b42b20cb915b81b6712c21, type: 3}
   warningDuration: 0.4

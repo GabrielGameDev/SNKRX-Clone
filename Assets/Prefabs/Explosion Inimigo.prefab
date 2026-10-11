@@ -44,3 +44,4 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d480905fd7e7474ba0cc3ed9a9b245ae, type: 3}
   m_Name:
   m_EditorClassIdentifier: Assembly-CSharp::EnemyDeathParticleEffect
+  particleMaterial: {fileID: 2100000, guid: 6c4968816197452882047e94d927e805, type: 2}

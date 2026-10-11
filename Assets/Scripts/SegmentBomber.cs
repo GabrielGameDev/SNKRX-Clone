@@ -164,6 +164,8 @@ public class SegmentBomber : MonoBehaviour
         Collider2D[] hits = Physics2D.OverlapCircleAll(origin, currentRadius);
         if (hits == null) return;
 
+        int enemiesHit = 0;
+        float totalDamage = 0f;
         for (int i = 0; i < hits.Length; i++)
         {
             EnemyHealth enemy = hits[i].GetComponent<EnemyHealth>();
@@ -174,9 +176,22 @@ public class SegmentBomber : MonoBehaviour
 
             if (enemy != null && !enemy.IsDead)
             {
-                enemy.TakeDamage(currentDamage);
+                float appliedDamage = enemy.TakeDamage(currentDamage, "bomber");
+                if (appliedDamage > 0f)
+                {
+                    enemiesHit++;
+                    totalDamage += appliedDamage;
+                }
             }
         }
+
+        GameAnalyticsReporter.Record("bomber_explosion", new System.Collections.Generic.Dictionary<string, object>
+        {
+            { "enemies_hit", enemiesHit },
+            { "damage_dealt", totalDamage },
+            { "radius", currentRadius },
+            { "damage_per_target", currentDamage }
+        });
     }
 
     private void OnDrawGizmosSelected()

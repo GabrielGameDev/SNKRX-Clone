@@ -4,17 +4,17 @@ using UnityEngine;
 [DisallowMultipleComponent]
 public sealed class EnemyDeathParticleEffect : MonoBehaviour
 {
-    private static Material particleMaterial;
+    [SerializeField] private Material particleMaterial;
 
     private void Awake()
     {
         ParticleSystem particles = gameObject.AddComponent<ParticleSystem>();
         particles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        Configure(particles);
+        Configure(particles, particleMaterial);
         particles.Play();
     }
 
-    private static void Configure(ParticleSystem particles)
+    private static void Configure(ParticleSystem particles, Material material)
     {
         var main = particles.main;
         main.duration = 0.42f;
@@ -64,16 +64,6 @@ public sealed class EnemyDeathParticleEffect : MonoBehaviour
         var renderer = particles.GetComponent<ParticleSystemRenderer>();
         renderer.renderMode = ParticleSystemRenderMode.Billboard;
         renderer.sortingOrder = 2;
-        renderer.sharedMaterial = GetParticleMaterial();
-    }
-
-    private static Material GetParticleMaterial()
-    {
-        if (particleMaterial != null) return particleMaterial;
-
-        Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-        if (shader == null) shader = Shader.Find("Particles/Standard Unlit");
-        if (shader != null) particleMaterial = new Material(shader);
-        return particleMaterial;
+        renderer.sharedMaterial = material;
     }
 }

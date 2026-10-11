@@ -157,17 +157,19 @@ public class EnemyHealth : MonoBehaviour
     /// <summary>
     /// Aplica dano ao inimigo. Caso a vida chegue a 0 ou menos, dispara a morte.
     /// </summary>
-    public virtual void TakeDamage(float amount)
+    public virtual float TakeDamage(float amount, string sourceType = "unknown")
     {
-        if (IsDead) return;
+        if (IsDead || amount <= 0f) return 0f;
 
         float previousHealth = CurrentHealth;
         CurrentHealth = Mathf.Max(0f, CurrentHealth - amount);
+        float appliedDamage = previousHealth - CurrentHealth;
         if (CurrentHealth < previousHealth)
         {
             FlashOnHit();
-            EnemyDamageNumber.Spawn(transform.position, previousHealth - CurrentHealth);
+            EnemyDamageNumber.Spawn(transform.position, appliedDamage);
             SfxPlayer.PlayHit();
+            if (sourceType != "unknown") GameEvents.TriggerSegmentDamageDealt(sourceType, appliedDamage);
         }
         OnHealthChanged?.Invoke(CurrentHealth, maxHealth);
 
@@ -175,6 +177,7 @@ public class EnemyHealth : MonoBehaviour
         {
             Die();
         }
+        return appliedDamage;
     }
 
     /// <summary>

@@ -33,6 +33,7 @@ public static class GameEvents
     public static event Action<int> OnWaveCompleted;
     public static event Action<float> OnPlayerDamageReceived;
     public static event Action<EnemyHealth> OnEnemyKilled;
+    public static event Action<string, float> OnSegmentDamageDealt;
 
     /// <summary>
     /// Helper para disparar o evento de início de onda.
@@ -73,5 +74,10 @@ public static class GameEvents
     public static void TriggerEnemyKilled(EnemyHealth enemy)
     {
         OnEnemyKilled?.Invoke(enemy);
+    }
+
+    public static void TriggerSegmentDamageDealt(string sourceType, float amount)
+    {
+        OnSegmentDamageDealt?.Invoke(sourceType, amount);
     }
 }
