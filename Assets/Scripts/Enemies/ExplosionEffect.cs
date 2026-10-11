@@ -17,13 +17,16 @@ public class ExplosionEffect : MonoBehaviour
     [SerializeField] private SpriteRenderer spriteRenderer;
 
     public float MaxScale { get => maxScale; set => maxScale = value; }
+    private float targetDiameter;
+    private bool useTargetDiameter;
 
     /// <summary>
-    /// Permite inicializar a escala máxima dinamicamente (ex: proporcional ao raio de explosão).
+    /// Define o diâmetro máximo visual em unidades do mundo, para coincidir com a área de efeito.
     /// </summary>
-    public void Initialize(float newMaxScale)
+    public void Initialize(float diameter)
     {
-        maxScale = newMaxScale;
+        targetDiameter = diameter;
+        useTargetDiameter = true;
     }
 
     private void Awake()
@@ -41,7 +44,15 @@ public class ExplosionEffect : MonoBehaviour
 
     private IEnumerator AnimateExplosion()
     {
-        Vector3 initialScale = Vector3.one * 0.2f;
+        Vector3 finalScale = Vector3.one * maxScale;
+        if (useTargetDiameter && spriteRenderer != null && spriteRenderer.sprite != null)
+        {
+            Vector2 spriteSize = spriteRenderer.sprite.bounds.size;
+            if (spriteSize.x > 0f && spriteSize.y > 0f)
+                finalScale = new Vector3(targetDiameter / spriteSize.x, targetDiameter / spriteSize.y, 1f);
+        }
+
+        Vector3 initialScale = finalScale * 0.1f;
         transform.localScale = initialScale;
 
         Color startColor = spriteRenderer != null ? spriteRenderer.color : Color.yellow;
@@ -54,8 +65,8 @@ public class ExplosionEffect : MonoBehaviour
             float t = Mathf.Clamp01(elapsed / duration);
 
             // Expansão exponencial rápida
-            float scaleMultiplier = Mathf.Lerp(0.2f, maxScale, Mathf.Sin(t * Mathf.PI * 0.5f));
-            transform.localScale = Vector3.one * scaleMultiplier;
+            float scaleProgress = Mathf.Sin(t * Mathf.PI * 0.5f);
+            transform.localScale = Vector3.Lerp(initialScale, finalScale, scaleProgress);
 
             if (spriteRenderer != null)
             {

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
 /// <summary>
@@ -164,8 +165,7 @@ public class SegmentBomber : MonoBehaviour
         Collider2D[] hits = Physics2D.OverlapCircleAll(origin, currentRadius);
         if (hits == null) return;
 
-        int enemiesHit = 0;
-        float totalDamage = 0f;
+        HashSet<EnemyHealth> damagedEnemies = new HashSet<EnemyHealth>();
         for (int i = 0; i < hits.Length; i++)
         {
             EnemyHealth enemy = hits[i].GetComponent<EnemyHealth>();
@@ -174,32 +174,19 @@ public class SegmentBomber : MonoBehaviour
                 enemy = hits[i].GetComponentInParent<EnemyHealth>();
             }
 
-            if (enemy != null && !enemy.IsDead)
+            if (enemy != null && !enemy.IsDead && damagedEnemies.Add(enemy))
             {
-                float appliedDamage = enemy.TakeDamage(currentDamage, "bomber");
-                if (appliedDamage > 0f)
-                {
-                    enemiesHit++;
-                    totalDamage += appliedDamage;
-                }
+                enemy.TakeDamage(currentDamage, "bomber");
             }
         }
-
-        GameAnalyticsReporter.Record("bomber_explosion", new System.Collections.Generic.Dictionary<string, object>
-        {
-            { "enemies_hit", enemiesHit },
-            { "damage_dealt", totalDamage },
-            { "radius", currentRadius },
-            { "damage_per_target", currentDamage }
-        });
     }
 
     private void OnDrawGizmosSelected()
     {
-        if (!showRangeGizmo || explosionRadius <= 0f) return;
+        if (!showRangeGizmo || EffectiveExplosionRadius <= 0f) return;
 
         // Laranja para diferenciar do raio vermelho do EnemyKamikaze
         Gizmos.color = new Color(1f, 0.5f, 0f, 0.4f);
-        Gizmos.DrawWireSphere(transform.position, explosionRadius);
+        Gizmos.DrawWireSphere(transform.position, EffectiveExplosionRadius);
     }
 }
