@@ -128,8 +128,8 @@ public class UpgradeCardUI : MonoBehaviour
         {
             colorNameText.text = $"{colorName} Orb";
             colorNameText.color = runColor;
-            colorNameText.fontSize = 22f;
-            SetTextRect(colorNameText.rectTransform, new Vector2(0f, 77f), new Vector2(280f, 34f));
+            // colorNameText.fontSize = 22f;
+            // SetTextRect(colorNameText.rectTransform, new Vector2(0f, 77f), new Vector2(280f, 34f));
         }
 
         if (!state.IsDiscovered)
@@ -139,24 +139,24 @@ public class UpgradeCardUI : MonoBehaviour
             {
                 titleText.text = "? ? ?";
                 titleText.color = Color.black;
-                titleText.fontSize = 25f;
-                SetTextRect(titleText.rectTransform, new Vector2(0f, 27f), new Vector2(290f, 60f));
+                // titleText.fontSize = 25f;
+                // SetTextRect(titleText.rectTransform, new Vector2(0f, 27f), new Vector2(290f, 60f));
             }
 
             if (descriptionText != null)
             {
                 descriptionText.text = $"Mysterious Effect!\n\nChoose this upgrade to reveal its power for this run and add a {colorName.ToLower()} segment to the snake.";
                 descriptionText.color = Color.black;
-                descriptionText.fontSize = 18f;
-                SetTextRect(descriptionText.rectTransform, new Vector2(0f, -88f), new Vector2(280f, 190f));
+                // descriptionText.fontSize = 18f;
+                // SetTextRect(descriptionText.rectTransform, new Vector2(0f, -88f), new Vector2(280f, 190f));
             }
 
             if (statusBadgeText != null)
             {
                 statusBadgeText.text = "UNKNOWN";
                 statusBadgeText.color = Color.black;
-                statusBadgeText.fontSize = 16f;
-                SetTextRect(statusBadgeText.rectTransform, new Vector2(0f, -205f), new Vector2(260f, 32f));
+                // statusBadgeText.fontSize = 16f;
+                // SetTextRect(statusBadgeText.rectTransform, new Vector2(0f, -205f), new Vector2(260f, 32f));
             }
         }
         else
@@ -166,24 +166,24 @@ public class UpgradeCardUI : MonoBehaviour
             {
                 titleText.text = state.DisplayName;
                 titleText.color = Color.black;
-                titleText.fontSize = 25f;
-                SetTextRect(titleText.rectTransform, new Vector2(0f, 27f), new Vector2(290f, 60f));
+                // titleText.fontSize = 25f;
+                // SetTextRect(titleText.rectTransform, new Vector2(0f, 27f), new Vector2(290f, 60f));
             }
 
             if (descriptionText != null)
             {
                 descriptionText.text = state.DiscoveredDescription;
                 descriptionText.color = Color.black;
-                descriptionText.fontSize = 18f;
-                SetTextRect(descriptionText.rectTransform, new Vector2(0f, -88f), new Vector2(280f, 190f));
+                // descriptionText.fontSize = 18f;
+                // SetTextRect(descriptionText.rectTransform, new Vector2(0f, -88f), new Vector2(280f, 190f));
             }
 
             if (statusBadgeText != null)
             {
                 statusBadgeText.text = state.Level > 0 ? $"LEVEL {state.Level + 1}" : "DISCOVERED";
                 statusBadgeText.color = Color.black;
-                statusBadgeText.fontSize = 16f;
-                SetTextRect(statusBadgeText.rectTransform, new Vector2(0f, -205f), new Vector2(260f, 32f));
+                // statusBadgeText.fontSize = 16f;
+                // SetTextRect(statusBadgeText.rectTransform, new Vector2(0f, -205f), new Vector2(260f, 32f));
             }
         }
     }

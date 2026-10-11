@@ -68,17 +68,11 @@ public class UpgradeSelectionUI : MonoBehaviour
         if (headerText != null)
         {
             headerText.text = "LEVEL UP!";
-            headerText.fontSize = 42f;
-            headerText.rectTransform.anchoredPosition = new Vector2(0f, 280f);
-            headerText.rectTransform.sizeDelta = new Vector2(900f, 64f);
         }
 
         if (subtitleText != null)
         {
             subtitleText.text = "Choose an upgrade for your snake:";
-            subtitleText.fontSize = 24f;
-            subtitleText.rectTransform.anchoredPosition = new Vector2(0f, 220f);
-            subtitleText.rectTransform.sizeDelta = new Vector2(900f, 45f);
         }
     }
 

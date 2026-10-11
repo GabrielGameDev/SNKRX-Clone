@@ -64,6 +64,15 @@ public class SnakeSegment : MonoBehaviour
             return;
         }
 
+        if (SnakeOwner != null && SnakeOwner.IsWrapDiscontinuity(rb2d.position, targetPosition))
+        {
+            // O segmento já atravessou o limite no histórico da cobra. Teleporta
+            // o Rigidbody2D para evitar que a interpolação o desenhe cruzando a arena.
+            rb2d.position = targetPosition;
+            rb2d.rotation = targetRotation.eulerAngles.z;
+            return;
+        }
+
         rb2d.MovePosition(targetPosition);
         rb2d.MoveRotation(targetRotation.eulerAngles.z);
     }

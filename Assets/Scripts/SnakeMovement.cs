@@ -251,6 +251,19 @@ public class SnakeMovement : MonoBehaviour
     }
 
     /// <summary>
+    /// Detecta quando a posição destino está do outro lado da arena por causa do wrap.
+    /// Nesses casos, Rigidbody2D.MovePosition interpolaria pelo meio da tela.
+    /// </summary>
+    public bool IsWrapDiscontinuity(Vector3 from, Vector3 to)
+    {
+        if (!enableWrap) return false;
+
+        Vector3 directDelta = to - from;
+        Vector3 toroidalDelta = GetToroidalDelta(from, to);
+        return (directDelta - toroidalDelta).sqrMagnitude > 0.001f;
+    }
+
+    /// <summary>
     /// Distância mínima considerando o espaço toroidal.
     /// </summary>
     public float GetToroidalDistance(Vector3 from, Vector3 to)
@@ -341,7 +354,14 @@ public class SnakeMovement : MonoBehaviour
 
         if (rb2d != null)
         {
-            rb2d.MovePosition(nextPosition);
+            if (IsWrapDiscontinuity(currentPosition, nextPosition))
+            {
+                rb2d.position = nextPosition;
+            }
+            else
+            {
+                rb2d.MovePosition(nextPosition);
+            }
         }
         else
         {
