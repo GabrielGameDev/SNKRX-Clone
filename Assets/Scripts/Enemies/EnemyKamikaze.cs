@@ -30,6 +30,10 @@ public class EnemyKamikaze : MonoBehaviour
     [Tooltip("Dano causado aos segmentos da cobra pegos na explosão.")]
     [SerializeField] private float explosionDamage = 2f;
 
+    [Header("Contact Settings")]
+    [Tooltip("Dano aplicado aos segmentos da cobra ao encostar no kamikaze.")]
+    [SerializeField] private float contactDamage = 1f;
+
     [Tooltip("Prefab opcional do efeito visual da explosão.")]
     [SerializeField] private ExplosionEffect explosionEffectPrefab;
 
@@ -162,6 +166,32 @@ public class EnemyKamikaze : MonoBehaviour
 
         // Destrói o inimigo
         Destroy(gameObject);
+    }
+
+    private void OnTriggerEnter2D(Collider2D collision)
+    {
+        TryDealContactDamage(collision);
+    }
+
+    private void OnTriggerStay2D(Collider2D collision)
+    {
+        TryDealContactDamage(collision);
+    }
+
+    private void TryDealContactDamage(Collider2D collision)
+    {
+        if (currentState == State.Exploded) return;
+
+        SegmentHealth segment = collision.GetComponent<SegmentHealth>();
+        if (segment == null)
+        {
+            segment = collision.GetComponentInParent<SegmentHealth>();
+        }
+
+        if (segment != null && !segment.IsDead)
+        {
+            segment.TakeDamage(contactDamage);
+        }
     }
 
     private void OnDestroy()

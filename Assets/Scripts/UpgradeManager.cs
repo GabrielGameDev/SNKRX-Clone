@@ -56,12 +56,12 @@ public class UpgradeManager : MonoBehaviour
     // Definição das 6 cores solicitadas
     private readonly List<UpgradeColorInfo> palette = new List<UpgradeColorInfo>()
     {
-        new UpgradeColorInfo("Vermelho", new Color(1f, 0.27f, 0.27f, 1f), "#FF4545"),
-        new UpgradeColorInfo("Verde",    new Color(0.18f, 0.8f, 0.44f, 1f), "#2ECC71"),
-        new UpgradeColorInfo("Azul",     new Color(0.2f, 0.6f, 1f, 1f),    "#3498DB"),
-        new UpgradeColorInfo("Amarelo",  new Color(0.95f, 0.77f, 0.06f, 1f), "#F1C40F"),
-        new UpgradeColorInfo("Roxo",     new Color(0.61f, 0.35f, 0.71f, 1f), "#9B59B6"),
-        new UpgradeColorInfo("Branco",   new Color(0.94f, 0.94f, 0.95f, 1f), "#ECF0F1")
+        new UpgradeColorInfo("Red",    new Color(1f, 0.27f, 0.27f, 1f), "#FF4545"),
+        new UpgradeColorInfo("Green",  new Color(0.18f, 0.8f, 0.44f, 1f), "#2ECC71"),
+        new UpgradeColorInfo("Blue",   new Color(0.2f, 0.6f, 1f, 1f),    "#3498DB"),
+        new UpgradeColorInfo("Yellow", new Color(0.95f, 0.77f, 0.06f, 1f), "#F1C40F"),
+        new UpgradeColorInfo("Purple", new Color(0.61f, 0.35f, 0.71f, 1f), "#9B59B6"),
+        new UpgradeColorInfo("White",  new Color(0.94f, 0.94f, 0.95f, 1f), "#ECF0F1")
     };
 
     private void Awake()

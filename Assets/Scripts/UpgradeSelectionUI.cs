@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -18,7 +19,7 @@ public class UpgradeSelectionUI : MonoBehaviour
     [Tooltip("Objeto raiz do painel modal que será ativado/desativado.")]
     [SerializeField] private GameObject modalRoot;
 
-    [Tooltip("Texto do cabeçalho (ex: 'SUBIU DE NÍVEL!').")]
+    [Tooltip("Header text (for example, 'LEVEL UP!').")]
     [SerializeField] private TextMeshProUGUI headerText;
 
     [Tooltip("Texto do subtítulo.")]
@@ -36,6 +37,7 @@ public class UpgradeSelectionUI : MonoBehaviour
 
     private int pendingLevelUps = 0;
     private bool isSelecting = false;
+    private bool isResolvingChoice = false;
     private readonly List<UpgradeCardUI> spawnedCards = new List<UpgradeCardUI>();
 
     private void Awake()
@@ -48,6 +50,8 @@ public class UpgradeSelectionUI : MonoBehaviour
 
         Instance = this;
 
+        ConfigureHeaderText();
+
         if (modalRoot == null && (cardSlots == null || cardSlots.Length == 0))
         {
             BuildDynamicUI();
@@ -56,6 +60,25 @@ public class UpgradeSelectionUI : MonoBehaviour
         if (modalRoot != null)
         {
             modalRoot.SetActive(false);
+        }
+    }
+
+    private void ConfigureHeaderText()
+    {
+        if (headerText != null)
+        {
+            headerText.text = "LEVEL UP!";
+            headerText.fontSize = 42f;
+            headerText.rectTransform.anchoredPosition = new Vector2(0f, 280f);
+            headerText.rectTransform.sizeDelta = new Vector2(900f, 64f);
+        }
+
+        if (subtitleText != null)
+        {
+            subtitleText.text = "Choose an upgrade for your snake:";
+            subtitleText.fontSize = 24f;
+            subtitleText.rectTransform.anchoredPosition = new Vector2(0f, 220f);
+            subtitleText.rectTransform.sizeDelta = new Vector2(900f, 45f);
         }
     }
 
@@ -106,6 +129,8 @@ public class UpgradeSelectionUI : MonoBehaviour
         }
 
         isSelecting = true;
+        isResolvingChoice = false;
+        SetCardsInteractable(true);
         Time.timeScale = 0f; // Pausa o jogo durante a escolha
 
         if (modalRoot != null)
@@ -151,11 +176,47 @@ public class UpgradeSelectionUI : MonoBehaviour
     /// </summary>
     private void OnCardSelected(RunUpgradeState selectedState)
     {
-        if (selectedState == null || UpgradeManager.Instance == null) return;
+        if (isResolvingChoice || selectedState == null || UpgradeManager.Instance == null) return;
 
-        // Aplica o upgrade e revela a cor
+        bool wasUndiscovered = !selectedState.IsDiscovered;
+
+        // Apply the effect and reveal its identity.
         UpgradeManager.Instance.SelectUpgrade(selectedState.Type);
 
+        if (wasUndiscovered)
+        {
+            isResolvingChoice = true;
+            SetCardsInteractable(false);
+            RefreshSelectedCard(selectedState);
+            StartCoroutine(CompleteUndiscoveredChoice());
+            return;
+        }
+
+        CompleteChoiceAndContinue();
+    }
+
+    private IEnumerator CompleteUndiscoveredChoice()
+    {
+        // Keep the selected card visible long enough to read its newly revealed effect.
+        yield return new WaitForSecondsRealtime(2f);
+        CompleteChoiceAndContinue();
+    }
+
+    private void RefreshSelectedCard(RunUpgradeState selectedState)
+    {
+        foreach (UpgradeCardUI card in GetActiveCards())
+        {
+            if (card != null && card.gameObject.activeInHierarchy && card.TitleText != null &&
+                card.TitleText.text == "? ? ?")
+            {
+                // Match by the selected state through each card's own refresh callback below.
+                card.RefreshIfStateMatches(selectedState);
+            }
+        }
+    }
+
+    private void CompleteChoiceAndContinue()
+    {
         pendingLevelUps--;
 
         if (pendingLevelUps > 0)
@@ -167,6 +228,25 @@ public class UpgradeSelectionUI : MonoBehaviour
         {
             CloseModal();
         }
+    }
+
+    private void SetCardsInteractable(bool interactable)
+    {
+        foreach (UpgradeCardUI card in GetActiveCards())
+            if (card != null && card.SelectButton != null)
+                card.SelectButton.interactable = interactable;
+    }
+
+    private IEnumerable<UpgradeCardUI> GetActiveCards()
+    {
+        if (cardSlots != null)
+        {
+            foreach (UpgradeCardUI card in cardSlots)
+                if (card != null) yield return card;
+        }
+
+        foreach (UpgradeCardUI card in spawnedCards)
+            if (card != null) yield return card;
     }
 
     /// <summary>
@@ -232,18 +312,18 @@ public class UpgradeSelectionUI : MonoBehaviour
         RectTransform panelRt = contentPanel.GetComponent<RectTransform>();
         panelRt.anchorMin = new Vector2(0.5f, 0.5f);
         panelRt.anchorMax = new Vector2(0.5f, 0.5f);
-        panelRt.sizeDelta = new Vector2(880f, 540f);
+        panelRt.sizeDelta = new Vector2(1080f, 680f);
 
         // Header Title
         GameObject headerGo = new GameObject("HeaderTitle", typeof(RectTransform), typeof(TextMeshProUGUI));
         headerGo.transform.SetParent(contentPanel.transform, false);
         RectTransform headerRt = headerGo.GetComponent<RectTransform>();
-        headerRt.anchoredPosition = new Vector2(0f, 220f);
-        headerRt.sizeDelta = new Vector2(800f, 50f);
+        headerRt.anchoredPosition = new Vector2(0f, 280f);
+        headerRt.sizeDelta = new Vector2(900f, 64f);
 
         headerText = headerGo.GetComponent<TextMeshProUGUI>();
-        headerText.text = "SUBIU DE NÍVEL!";
-        headerText.fontSize = 32;
+        headerText.text = "LEVEL UP!";
+        headerText.fontSize = 42;
         headerText.fontStyle = FontStyles.Bold;
         headerText.color = new Color(1f, 0.85f, 0.2f); // Dourado
         headerText.alignment = TextAlignmentOptions.Center;
@@ -252,12 +332,12 @@ public class UpgradeSelectionUI : MonoBehaviour
         GameObject subGo = new GameObject("Subtitle", typeof(RectTransform), typeof(TextMeshProUGUI));
         subGo.transform.SetParent(contentPanel.transform, false);
         RectTransform subRt = subGo.GetComponent<RectTransform>();
-        subRt.anchoredPosition = new Vector2(0f, 180f);
-        subRt.sizeDelta = new Vector2(800f, 30f);
+        subRt.anchoredPosition = new Vector2(0f, 220f);
+        subRt.sizeDelta = new Vector2(900f, 45f);
 
         subtitleText = subGo.GetComponent<TextMeshProUGUI>();
-        subtitleText.text = "Escolha uma bênção para a sua cobra:";
-        subtitleText.fontSize = 16;
+        subtitleText.text = "Choose an upgrade for your snake:";
+        subtitleText.fontSize = 24;
         subtitleText.color = new Color(0.85f, 0.85f, 0.9f, 0.8f);
         subtitleText.alignment = TextAlignmentOptions.Center;
 
@@ -267,11 +347,11 @@ public class UpgradeSelectionUI : MonoBehaviour
         cardsContainer = containerGo.transform;
 
         RectTransform contRt = containerGo.GetComponent<RectTransform>();
-        contRt.anchoredPosition = new Vector2(0f, -40f);
-        contRt.sizeDelta = new Vector2(840f, 380f);
+        contRt.anchoredPosition = new Vector2(0f, -65f);
+        contRt.sizeDelta = new Vector2(1024f, 500f);
 
         HorizontalLayoutGroup hlg = containerGo.GetComponent<HorizontalLayoutGroup>();
-        hlg.spacing = 25f;
+        hlg.spacing = 16f;
         hlg.childAlignment = TextAnchor.MiddleCenter;
         hlg.childControlWidth = false;
         hlg.childControlHeight = false;
@@ -291,10 +371,10 @@ public class UpgradeSelectionUI : MonoBehaviour
         cardGo.transform.SetParent(parent, false);
 
         RectTransform cardRt = cardGo.GetComponent<RectTransform>();
-        cardRt.sizeDelta = new Vector2(250f, 360f);
+        cardRt.sizeDelta = new Vector2(320f, 480f);
 
         Image bgImage = cardGo.GetComponent<Image>();
-        bgImage.color = new Color(0.12f, 0.13f, 0.19f, 0.97f);
+        bgImage.color = new Color(0.96f, 0.95f, 0.91f, 1f);
 
         Button btn = cardGo.GetComponent<Button>();
         ColorBlock colors = btn.colors;
@@ -322,8 +402,8 @@ public class UpgradeSelectionUI : MonoBehaviour
         GameObject orbGo = new GameObject("ColorOrb", typeof(RectTransform), typeof(Image));
         orbGo.transform.SetParent(cardGo.transform, false);
         RectTransform orbRt = orbGo.GetComponent<RectTransform>();
-        orbRt.anchoredPosition = new Vector2(0f, 110f);
-        orbRt.sizeDelta = new Vector2(64f, 64f);
+        orbRt.anchoredPosition = new Vector2(0f, 135f);
+        orbRt.sizeDelta = new Vector2(84f, 84f);
         Image orbImg = orbGo.GetComponent<Image>();
         orbImg.sprite = UpgradeCardUI.GetOrCreateCircleSprite();
         orbImg.raycastTarget = false;
@@ -333,10 +413,10 @@ public class UpgradeSelectionUI : MonoBehaviour
         GameObject colorNameGo = new GameObject("ColorName", typeof(RectTransform), typeof(TextMeshProUGUI));
         colorNameGo.transform.SetParent(cardGo.transform, false);
         RectTransform cnRt = colorNameGo.GetComponent<RectTransform>();
-        cnRt.anchoredPosition = new Vector2(0f, 55f);
-        cnRt.sizeDelta = new Vector2(220f, 26f);
+        cnRt.anchoredPosition = new Vector2(0f, 77f);
+        cnRt.sizeDelta = new Vector2(280f, 34f);
         TextMeshProUGUI cnText = colorNameGo.GetComponent<TextMeshProUGUI>();
-        cnText.fontSize = 16;
+        cnText.fontSize = 22;
         cnText.fontStyle = FontStyles.Bold;
         cnText.alignment = TextAlignmentOptions.Center;
         cnText.raycastTarget = false;
@@ -346,10 +426,10 @@ public class UpgradeSelectionUI : MonoBehaviour
         GameObject titleGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
         titleGo.transform.SetParent(cardGo.transform, false);
         RectTransform titleRt = titleGo.GetComponent<RectTransform>();
-        titleRt.anchoredPosition = new Vector2(0f, 15f);
-        titleRt.sizeDelta = new Vector2(220f, 35f);
+        titleRt.anchoredPosition = new Vector2(0f, 27f);
+        titleRt.sizeDelta = new Vector2(290f, 60f);
         TextMeshProUGUI titleText = titleGo.GetComponent<TextMeshProUGUI>();
-        titleText.fontSize = 18;
+        titleText.fontSize = 25;
         titleText.fontStyle = FontStyles.Bold;
         titleText.alignment = TextAlignmentOptions.Center;
         titleText.textWrappingMode = TextWrappingModes.Normal;
@@ -360,12 +440,12 @@ public class UpgradeSelectionUI : MonoBehaviour
         GameObject descGo = new GameObject("Description", typeof(RectTransform), typeof(TextMeshProUGUI));
         descGo.transform.SetParent(cardGo.transform, false);
         RectTransform descRt = descGo.GetComponent<RectTransform>();
-        descRt.anchoredPosition = new Vector2(0f, -65f);
-        descRt.sizeDelta = new Vector2(210f, 100f);
+        descRt.anchoredPosition = new Vector2(0f, -88f);
+        descRt.sizeDelta = new Vector2(280f, 190f);
         TextMeshProUGUI descText = descGo.GetComponent<TextMeshProUGUI>();
-        descText.fontSize = 13;
-        descText.lineSpacing = 5f;
-        descText.color = new Color(0.85f, 0.85f, 0.9f);
+        descText.fontSize = 18;
+        descText.lineSpacing = 3f;
+        descText.color = Color.black;
         descText.alignment = TextAlignmentOptions.Center;
         descText.textWrappingMode = TextWrappingModes.Normal;
         descText.raycastTarget = false;
@@ -375,10 +455,10 @@ public class UpgradeSelectionUI : MonoBehaviour
         GameObject badgeGo = new GameObject("StatusBadge", typeof(RectTransform), typeof(TextMeshProUGUI));
         badgeGo.transform.SetParent(cardGo.transform, false);
         RectTransform badgeRt = badgeGo.GetComponent<RectTransform>();
-        badgeRt.anchoredPosition = new Vector2(0f, -145f);
-        badgeRt.sizeDelta = new Vector2(200f, 24f);
+        badgeRt.anchoredPosition = new Vector2(0f, -205f);
+        badgeRt.sizeDelta = new Vector2(260f, 32f);
         TextMeshProUGUI badgeText = badgeGo.GetComponent<TextMeshProUGUI>();
-        badgeText.fontSize = 12;
+        badgeText.fontSize = 16;
         badgeText.fontStyle = FontStyles.Bold;
         badgeText.alignment = TextAlignmentOptions.Center;
         badgeText.raycastTarget = false;

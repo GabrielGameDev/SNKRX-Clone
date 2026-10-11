@@ -17,7 +17,7 @@ public class UpgradeCardUI : MonoBehaviour
     [Tooltip("Borda ou fundo com tintura da cor da run.")]
     [SerializeField] private Image cardBorder;
 
-    [Tooltip("Texto com o nome da cor (ex: 'Esfera Azul').")]
+    [Tooltip("Text showing the assigned color name (for example, 'Blue Orb').")]
     [SerializeField] private TextMeshProUGUI colorNameText;
 
     [Tooltip("Título do upgrade ('? ? ?' se desconhecido ou o nome real se descoberto).")]
@@ -26,7 +26,7 @@ public class UpgradeCardUI : MonoBehaviour
     [Tooltip("Descrição detalhada do efeito.")]
     [SerializeField] private TextMeshProUGUI descriptionText;
 
-    [Tooltip("Badge de status (ex: 'DESCONHECIDO' ou 'NÍVEL 2').")]
+    [Tooltip("Status badge (for example, 'UNKNOWN' or 'LEVEL 2').")]
     [SerializeField] private TextMeshProUGUI statusBadgeText;
 
     [Tooltip("Botão interativo de seleção da carta.")]
@@ -101,8 +101,13 @@ public class UpgradeCardUI : MonoBehaviour
         onSelectedCallback = onSelected;
 
         Color runColor = state.AssignedColor.color;
-        string hexColor = state.AssignedColor.hexCode;
         string colorName = state.AssignedColor.colorName;
+
+        // Keep the cards readable in both the scene and dynamically generated layouts.
+        RectTransform cardRect = transform as RectTransform;
+        if (cardRect != null) cardRect.sizeDelta = new Vector2(320f, 480f);
+        Image background = GetComponent<Image>();
+        if (background != null) background.color = new Color(0.96f, 0.95f, 0.91f, 1f);
 
         if (colorOrb != null)
         {
@@ -111,6 +116,7 @@ public class UpgradeCardUI : MonoBehaviour
                 colorOrb.sprite = GetOrCreateCircleSprite();
             }
             colorOrb.color = runColor;
+            SetTextRect(colorOrb.rectTransform, new Vector2(0f, 135f), new Vector2(84f, 84f));
         }
 
         if (cardBorder != null)
@@ -120,7 +126,10 @@ public class UpgradeCardUI : MonoBehaviour
 
         if (colorNameText != null)
         {
-            colorNameText.text = $"<color={hexColor}>Esfera {colorName}</color>";
+            colorNameText.text = $"{colorName} Orb";
+            colorNameText.color = runColor;
+            colorNameText.fontSize = 22f;
+            SetTextRect(colorNameText.rectTransform, new Vector2(0f, 77f), new Vector2(280f, 34f));
         }
 
         if (!state.IsDiscovered)
@@ -129,17 +138,25 @@ public class UpgradeCardUI : MonoBehaviour
             if (titleText != null)
             {
                 titleText.text = "? ? ?";
+                titleText.color = Color.black;
+                titleText.fontSize = 25f;
+                SetTextRect(titleText.rectTransform, new Vector2(0f, 27f), new Vector2(290f, 60f));
             }
 
             if (descriptionText != null)
             {
                 descriptionText.text = $"Mysterious Effect!\n\nChoose this upgrade to reveal its power for this run and add a {colorName.ToLower()} segment to the snake.";
+                descriptionText.color = Color.black;
+                descriptionText.fontSize = 18f;
+                SetTextRect(descriptionText.rectTransform, new Vector2(0f, -88f), new Vector2(280f, 190f));
             }
 
             if (statusBadgeText != null)
             {
-                statusBadgeText.text = "DESCONHECIDO";
-                statusBadgeText.color = new Color(0.9f, 0.9f, 0.9f, 0.6f);
+                statusBadgeText.text = "UNKNOWN";
+                statusBadgeText.color = Color.black;
+                statusBadgeText.fontSize = 16f;
+                SetTextRect(statusBadgeText.rectTransform, new Vector2(0f, -205f), new Vector2(260f, 32f));
             }
         }
         else
@@ -148,19 +165,40 @@ public class UpgradeCardUI : MonoBehaviour
             if (titleText != null)
             {
                 titleText.text = state.DisplayName;
+                titleText.color = Color.black;
+                titleText.fontSize = 25f;
+                SetTextRect(titleText.rectTransform, new Vector2(0f, 27f), new Vector2(290f, 60f));
             }
 
             if (descriptionText != null)
             {
                 descriptionText.text = state.DiscoveredDescription;
+                descriptionText.color = Color.black;
+                descriptionText.fontSize = 18f;
+                SetTextRect(descriptionText.rectTransform, new Vector2(0f, -88f), new Vector2(280f, 190f));
             }
 
             if (statusBadgeText != null)
             {
-                statusBadgeText.text = state.Level > 0 ? $"NÍVEL {state.Level + 1}" : "DESCOBERTO";
-                statusBadgeText.color = runColor;
+                statusBadgeText.text = state.Level > 0 ? $"LEVEL {state.Level + 1}" : "DISCOVERED";
+                statusBadgeText.color = Color.black;
+                statusBadgeText.fontSize = 16f;
+                SetTextRect(statusBadgeText.rectTransform, new Vector2(0f, -205f), new Vector2(260f, 32f));
             }
         }
+    }
+
+    public void RefreshIfStateMatches(RunUpgradeState state)
+    {
+        if (currentState == state)
+            Setup(currentState, onSelectedCallback);
+    }
+
+    private static void SetTextRect(RectTransform rect, Vector2 position, Vector2 size)
+    {
+        if (rect == null) return;
+        rect.anchoredPosition = position;
+        rect.sizeDelta = size;
     }
 
     private void HandleClicked()

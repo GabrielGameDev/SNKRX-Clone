@@ -95,7 +95,7 @@ namespace SNKRX.Editor
             panelRt.anchorMin = new Vector2(0.5f, 0.5f);
             panelRt.anchorMax = new Vector2(0.5f, 0.5f);
             panelRt.anchoredPosition = Vector2.zero;
-            panelRt.sizeDelta = new Vector2(880f, 540f);
+            panelRt.sizeDelta = new Vector2(1080f, 680f);
 
             // 8. Cria HeaderTitle
             GameObject headerGo = new GameObject("HeaderTitle", typeof(RectTransform), typeof(TextMeshProUGUI));
@@ -103,13 +103,13 @@ namespace SNKRX.Editor
             headerGo.transform.SetParent(contentPanel.transform, false);
 
             RectTransform headerRt = headerGo.GetComponent<RectTransform>();
-            headerRt.anchoredPosition = new Vector2(0f, 220f);
-            headerRt.sizeDelta = new Vector2(800f, 50f);
+            headerRt.anchoredPosition = new Vector2(0f, 280f);
+            headerRt.sizeDelta = new Vector2(900f, 64f);
 
             TextMeshProUGUI headerText = headerGo.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) headerText.font = fontAsset;
-            headerText.text = "SUBIU DE NÍVEL!";
-            headerText.fontSize = 32;
+            headerText.text = "LEVEL UP!";
+            headerText.fontSize = 42;
             headerText.fontStyle = FontStyles.Bold;
             headerText.color = new Color(1f, 0.85f, 0.2f); // Ouro
             headerText.alignment = TextAlignmentOptions.Center;
@@ -120,13 +120,13 @@ namespace SNKRX.Editor
             subGo.transform.SetParent(contentPanel.transform, false);
 
             RectTransform subRt = subGo.GetComponent<RectTransform>();
-            subRt.anchoredPosition = new Vector2(0f, 180f);
-            subRt.sizeDelta = new Vector2(800f, 30f);
+            subRt.anchoredPosition = new Vector2(0f, 220f);
+            subRt.sizeDelta = new Vector2(900f, 45f);
 
             TextMeshProUGUI subtitleText = subGo.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) subtitleText.font = fontAsset;
-            subtitleText.text = "Escolha uma bênção para a sua cobra:";
-            subtitleText.fontSize = 16;
+            subtitleText.text = "Choose an upgrade for your snake:";
+            subtitleText.fontSize = 24;
             subtitleText.color = new Color(0.85f, 0.85f, 0.9f, 0.8f);
             subtitleText.alignment = TextAlignmentOptions.Center;
 
@@ -136,11 +136,11 @@ namespace SNKRX.Editor
             containerGo.transform.SetParent(contentPanel.transform, false);
 
             RectTransform contRt = containerGo.GetComponent<RectTransform>();
-            contRt.anchoredPosition = new Vector2(0f, -40f);
-            contRt.sizeDelta = new Vector2(840f, 380f);
+            contRt.anchoredPosition = new Vector2(0f, -65f);
+            contRt.sizeDelta = new Vector2(1024f, 500f);
 
             HorizontalLayoutGroup hlg = containerGo.GetComponent<HorizontalLayoutGroup>();
-            hlg.spacing = 25f;
+            hlg.spacing = 16f;
             hlg.childAlignment = TextAnchor.MiddleCenter;
             hlg.childControlWidth = false;
             hlg.childControlHeight = false;
@@ -149,7 +149,7 @@ namespace SNKRX.Editor
 
             // 11. Cria os 3 cards
             string[] sampleColors = { "#FF4545", "#3498DB", "#9B59B6" };
-            string[] sampleNames = { "Vermelho", "Azul", "Roxo" };
+            string[] sampleNames = { "Red", "Blue", "Purple" };
             UpgradeCardUI[] cards = new UpgradeCardUI[3];
             for (int i = 0; i < 3; i++)
             {
@@ -199,10 +199,10 @@ namespace SNKRX.Editor
             cardGo.transform.SetParent(parent, false);
 
             RectTransform cardRt = cardGo.GetComponent<RectTransform>();
-            cardRt.sizeDelta = new Vector2(250f, 360f);
+            cardRt.sizeDelta = new Vector2(320f, 480f);
 
             Image bgImage = cardGo.GetComponent<Image>();
-            bgImage.color = new Color(0.12f, 0.13f, 0.19f, 0.97f);
+            bgImage.color = new Color(0.96f, 0.95f, 0.91f, 1f);
 
             Button btn = cardGo.GetComponent<Button>();
             ColorBlock colors = btn.colors;
@@ -230,8 +230,8 @@ namespace SNKRX.Editor
             GameObject orbGo = new GameObject("ColorOrb", typeof(RectTransform), typeof(Image));
             orbGo.transform.SetParent(cardGo.transform, false);
             RectTransform orbRt = orbGo.GetComponent<RectTransform>();
-            orbRt.anchoredPosition = new Vector2(0f, 110f);
-            orbRt.sizeDelta = new Vector2(64f, 64f);
+            orbRt.anchoredPosition = new Vector2(0f, 135f);
+            orbRt.sizeDelta = new Vector2(84f, 84f);
             Image orbImg = orbGo.GetComponent<Image>();
             orbImg.sprite = UpgradeCardUI.GetOrCreateCircleSprite();
             orbImg.color = col;
@@ -241,12 +241,13 @@ namespace SNKRX.Editor
             GameObject colorNameGo = new GameObject("ColorName", typeof(RectTransform), typeof(TextMeshProUGUI));
             colorNameGo.transform.SetParent(cardGo.transform, false);
             RectTransform cnRt = colorNameGo.GetComponent<RectTransform>();
-            cnRt.anchoredPosition = new Vector2(0f, 55f);
-            cnRt.sizeDelta = new Vector2(220f, 26f);
+            cnRt.anchoredPosition = new Vector2(0f, 77f);
+            cnRt.sizeDelta = new Vector2(280f, 34f);
             TextMeshProUGUI cnText = colorNameGo.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) cnText.font = fontAsset;
-            cnText.text = $"<color={hexColor}>Esfera {colorName}</color>";
-            cnText.fontSize = 16;
+            cnText.text = $"{colorName} Orb";
+            cnText.color = col;
+            cnText.fontSize = 22;
             cnText.fontStyle = FontStyles.Bold;
             cnText.alignment = TextAlignmentOptions.Center;
             cnText.raycastTarget = false;
@@ -255,12 +256,13 @@ namespace SNKRX.Editor
             GameObject titleGo = new GameObject("Title", typeof(RectTransform), typeof(TextMeshProUGUI));
             titleGo.transform.SetParent(cardGo.transform, false);
             RectTransform titleRt = titleGo.GetComponent<RectTransform>();
-            titleRt.anchoredPosition = new Vector2(0f, 15f);
-            titleRt.sizeDelta = new Vector2(220f, 35f);
+            titleRt.anchoredPosition = new Vector2(0f, 27f);
+            titleRt.sizeDelta = new Vector2(290f, 60f);
             TextMeshProUGUI titleText = titleGo.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) titleText.font = fontAsset;
             titleText.text = "? ? ?";
-            titleText.fontSize = 18;
+            titleText.color = Color.black;
+            titleText.fontSize = 25;
             titleText.fontStyle = FontStyles.Bold;
             titleText.alignment = TextAlignmentOptions.Center;
             titleText.textWrappingMode = TextWrappingModes.Normal;
@@ -270,14 +272,14 @@ namespace SNKRX.Editor
             GameObject descGo = new GameObject("Description", typeof(RectTransform), typeof(TextMeshProUGUI));
             descGo.transform.SetParent(cardGo.transform, false);
             RectTransform descRt = descGo.GetComponent<RectTransform>();
-            descRt.anchoredPosition = new Vector2(0f, -65f);
-            descRt.sizeDelta = new Vector2(210f, 100f);
+            descRt.anchoredPosition = new Vector2(0f, -88f);
+            descRt.sizeDelta = new Vector2(280f, 190f);
             TextMeshProUGUI descText = descGo.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) descText.font = fontAsset;
             descText.text = $"Mysterious Effect!\n\nChoose this upgrade to reveal its power for this run and add a {colorName.ToLower()} segment to the snake.";
-            descText.fontSize = 13;
-            descText.lineSpacing = 5f;
-            descText.color = new Color(0.85f, 0.85f, 0.9f);
+            descText.fontSize = 18;
+            descText.lineSpacing = 3f;
+            descText.color = Color.black;
             descText.alignment = TextAlignmentOptions.Center;
             descText.textWrappingMode = TextWrappingModes.Normal;
             descText.raycastTarget = false;
@@ -286,15 +288,15 @@ namespace SNKRX.Editor
             GameObject badgeGo = new GameObject("StatusBadge", typeof(RectTransform), typeof(TextMeshProUGUI));
             badgeGo.transform.SetParent(cardGo.transform, false);
             RectTransform badgeRt = badgeGo.GetComponent<RectTransform>();
-            badgeRt.anchoredPosition = new Vector2(0f, -145f);
-            badgeRt.sizeDelta = new Vector2(200f, 24f);
+            badgeRt.anchoredPosition = new Vector2(0f, -205f);
+            badgeRt.sizeDelta = new Vector2(260f, 32f);
             TextMeshProUGUI badgeText = badgeGo.GetComponent<TextMeshProUGUI>();
             if (fontAsset != null) badgeText.font = fontAsset;
-            badgeText.text = "DESCONHECIDO";
-            badgeText.fontSize = 12;
+            badgeText.text = "UNKNOWN";
+            badgeText.fontSize = 16;
             badgeText.fontStyle = FontStyles.Bold;
             badgeText.alignment = TextAlignmentOptions.Center;
-            badgeText.color = new Color(0.9f, 0.9f, 0.9f, 0.6f);
+            badgeText.color = Color.black;
             badgeText.raycastTarget = false;
 
             // Serializa no UpgradeCardUI

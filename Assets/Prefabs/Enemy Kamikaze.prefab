@@ -145,6 +145,7 @@ MonoBehaviour:
   fuseTime: 0.6
   explosionRadius: 2
   explosionDamage: 2
+  contactDamage: 1
   explosionEffectPrefab: {fileID: 5395415390795755325, guid: e9a5a14834b42b20cb915b81b6712c21, type: 3}
   spriteRenderer: {fileID: 5087824265653316906}
   warningFlashColor: {r: 1, g: 0, b: 0, a: 1}
