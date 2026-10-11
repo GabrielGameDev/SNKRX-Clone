@@ -11,6 +11,7 @@ public class SegmentHealthBar : MonoBehaviour
     [Header("Alvo")]
     [Tooltip("Referência ao SegmentHealth monitorado. Se nulo, busca automaticamente no objeto ou pai.")]
     [SerializeField] private SegmentHealth targetHealth;
+    private EnemyHealth targetEnemyHealth;
 
     [Header("Posicionamento")]
     [Tooltip("Offset relativo ao centro do segmento. A barra mantém rotação horizontal travada.")]
@@ -97,6 +98,10 @@ public class SegmentHealthBar : MonoBehaviour
         {
             Initialize(targetHealth);
         }
+        else if (targetEnemyHealth != null)
+        {
+            InitializeValues(targetEnemyHealth.CurrentHealth, targetEnemyHealth.MaxHealth);
+        }
         else
         {
             SetRenderersActive(false);
@@ -110,6 +115,11 @@ public class SegmentHealthBar : MonoBehaviour
             targetHealth.OnHealthChanged += HandleHealthChanged;
             targetHealth.OnDeath += HandleDeath;
         }
+        if (targetEnemyHealth != null)
+        {
+            targetEnemyHealth.OnHealthChanged += HandleHealthChanged;
+            targetEnemyHealth.OnDeath += HandleDeath;
+        }
     }
 
     private void OnDisable()
@@ -119,6 +129,11 @@ public class SegmentHealthBar : MonoBehaviour
             targetHealth.OnHealthChanged -= HandleHealthChanged;
             targetHealth.OnDeath -= HandleDeath;
         }
+        if (targetEnemyHealth != null)
+        {
+            targetEnemyHealth.OnHealthChanged -= HandleHealthChanged;
+            targetEnemyHealth.OnDeath -= HandleDeath;
+        }
     }
 
     /// <summary>
@@ -126,6 +141,7 @@ public class SegmentHealthBar : MonoBehaviour
     /// </summary>
     public void Initialize(SegmentHealth health)
     {
+        UnsubscribeFromEnemy();
         if (targetHealth != null && targetHealth != health)
         {
             targetHealth.OnHealthChanged -= HandleHealthChanged;
@@ -142,26 +158,48 @@ public class SegmentHealthBar : MonoBehaviour
             targetHealth.OnHealthChanged += HandleHealthChanged;
             targetHealth.OnDeath += HandleDeath;
 
-            float max = targetHealth.MaxHealth;
-            float current = targetHealth.CurrentHealth;
-            lastKnownHealth = current;
-
-            targetFillRatio = max > 0f ? Mathf.Clamp01(current / max) : 1f;
-            displayedFillRatio = targetFillRatio;
-
-            if (showOnlyWhenDamaged && Mathf.Approximately(current, max))
-            {
-                currentAlpha = 0f;
-                isVisible = false;
-                SetRenderersActive(false);
-            }
-            else
-            {
-                ShowBar();
-            }
-
-            UpdateBarTransforms();
+            InitializeValues(targetHealth.CurrentHealth, targetHealth.MaxHealth);
         }
+    }
+
+    public void Initialize(EnemyHealth health)
+    {
+        if (targetHealth != null)
+        {
+            targetHealth.OnHealthChanged -= HandleHealthChanged;
+            targetHealth.OnDeath -= HandleDeath;
+            targetHealth = null;
+        }
+        UnsubscribeFromEnemy();
+        targetEnemyHealth = health;
+        if (targetEnemyHealth == null) return;
+
+        targetEnemyHealth.OnHealthChanged += HandleHealthChanged;
+        targetEnemyHealth.OnDeath += HandleDeath;
+        InitializeValues(targetEnemyHealth.CurrentHealth, targetEnemyHealth.MaxHealth);
+    }
+
+    private void InitializeValues(float current, float max)
+    {
+        lastKnownHealth = current;
+        targetFillRatio = max > 0f ? Mathf.Clamp01(current / max) : 1f;
+        displayedFillRatio = targetFillRatio;
+        if (showOnlyWhenDamaged && Mathf.Approximately(current, max))
+        {
+            currentAlpha = 0f;
+            isVisible = false;
+            SetRenderersActive(false);
+        }
+        else ShowBar();
+        UpdateBarTransforms();
+    }
+
+    private void UnsubscribeFromEnemy()
+    {
+        if (targetEnemyHealth == null) return;
+        targetEnemyHealth.OnHealthChanged -= HandleHealthChanged;
+        targetEnemyHealth.OnDeath -= HandleDeath;
+        targetEnemyHealth = null;
     }
 
     private void HandleHealthChanged(float current, float max)
@@ -216,10 +254,11 @@ public class SegmentHealthBar : MonoBehaviour
 
     private void LateUpdate()
     {
-        if (targetHealth == null) return;
+        Transform targetTransform = targetHealth != null ? targetHealth.transform : targetEnemyHealth != null ? targetEnemyHealth.transform : null;
+        if (targetTransform == null) return;
 
         // Mantém a barra fixa acima do segmento sem girar quando a cobra vira
-        transform.position = targetHealth.transform.position + offset;
+        transform.position = targetTransform.position + offset;
         transform.rotation = Quaternion.identity;
 
         UpdateFillSmoothness();

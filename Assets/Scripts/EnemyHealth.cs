@@ -19,6 +19,12 @@ public class EnemyHealth : MonoBehaviour
     [Tooltip("Vida máxima inicial do inimigo.")]
     [SerializeField] private float maxHealth = 10f;
 
+    [Header("Health Bar")]
+    [Tooltip("Barra de vida do inimigo. Se vazia, será criada automaticamente.")]
+    [SerializeField] private SegmentHealthBar healthBar;
+
+    [SerializeField] private bool autoCreateHealthBar = true;
+
     [Header("XP Drop")]
     [Tooltip("Prefab do item de XP solto quando este inimigo morre. Configure no Inspector.")]
     [SerializeField] private XpPickup xpPickupPrefab;
@@ -37,6 +43,26 @@ public class EnemyHealth : MonoBehaviour
     protected virtual void Awake()
     {
         CurrentHealth = maxHealth;
+        SetupHealthBar();
+    }
+
+    private void SetupHealthBar()
+    {
+        if (healthBar == null)
+        {
+            healthBar = GetComponentInChildren<SegmentHealthBar>();
+            if (healthBar == null && autoCreateHealthBar)
+            {
+                var barObject = new GameObject("HealthBar");
+                barObject.transform.SetParent(transform, false);
+                healthBar = barObject.AddComponent<SegmentHealthBar>();
+            }
+        }
+
+        if (healthBar != null)
+        {
+            healthBar.Initialize(this);
+        }
     }
 
     /// <summary>
