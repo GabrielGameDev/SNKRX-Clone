@@ -30,6 +30,7 @@ public class SegmentShooter : MonoBehaviour
     public float FireInterval { get => fireInterval; set => fireInterval = Mathf.Max(0.05f, value); }
     public float AttackRange { get => attackRange; set => attackRange = value; }
     public float EffectiveAttackRange => attackRange * (UpgradeManager.Instance != null ? UpgradeManager.Instance.RangeMultiplier : 1f);
+    public float BaseProjectileDamage => projectilePrefab != null ? projectilePrefab.Damage : 0f;
 
     private void Awake()
     {

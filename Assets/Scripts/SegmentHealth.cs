@@ -20,6 +20,9 @@ public class SegmentHealth : MonoBehaviour
     [Tooltip("Tempo de invulnerabilidade temporária após sofrer um golpe (em segundos).")]
     [SerializeField] private float invulnerabilityDuration = 1.0f;
 
+    [Tooltip("Dano causado e recebido ao colidir com outro segmento não adjacente.")]
+    [SerializeField, Min(0f)] private float collisionDamage = 1f;
+
     [Header("Visual Feedback")]
     [Tooltip("SpriteRenderer do segmento para efeito de piscar ao receber dano.")]
     [SerializeField] private SpriteRenderer spriteRenderer;
@@ -40,6 +43,9 @@ public class SegmentHealth : MonoBehaviour
 
     [Tooltip("Se verdadeiro, cria automaticamente a barra de vida como filha deste objeto se nenhuma for especificada.")]
     [SerializeField] private bool autoCreateHealthBar = true;
+
+    [Header("Death Feedback")]
+    [SerializeField] private ExplosionEffect deathEffectPrefab;
 
     private float currentHealth;
     private float invulnerabilityTimer;
@@ -110,6 +116,34 @@ public class SegmentHealth : MonoBehaviour
         }
     }
 
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        SegmentHealth otherSegment = other.GetComponent<SegmentHealth>();
+        if (otherSegment == null) otherSegment = other.GetComponentInParent<SegmentHealth>();
+        if (otherSegment == null || otherSegment == this || otherSegment.IsDead || IsDead) return;
+        if (AreAdjacentParts(otherSegment)) return;
+
+        if (collisionDamage > 0f) TakeDamage(collisionDamage);
+        if (otherSegment.collisionDamage > 0f) otherSegment.TakeDamage(otherSegment.collisionDamage);
+    }
+
+    private bool AreAdjacentParts(SegmentHealth other)
+    {
+        SnakeSegment thisPart = GetComponent<SnakeSegment>();
+        SnakeSegment otherPart = other.GetComponent<SnakeSegment>();
+
+        if (thisPart != null && otherPart != null && thisPart.SnakeOwner == otherPart.SnakeOwner)
+            return Mathf.Abs(thisPart.SegmentIndex - otherPart.SegmentIndex) <= 1;
+
+        if (isHead && otherPart != null && otherPart.SnakeOwner == SnakeMovement.Instance)
+            return otherPart.SegmentIndex == 0;
+
+        if (other.isHead && thisPart != null && thisPart.SnakeOwner == SnakeMovement.Instance)
+            return thisPart.SegmentIndex == 0;
+
+        return false;
+    }
+
     /// <summary>
     /// Define a cor base do segmento e atualiza sua renderização e cor de retorno pós-dano.
     /// </summary>
@@ -171,6 +205,7 @@ public class SegmentHealth : MonoBehaviour
         if (currentHealth < previousHealth)
         {
             SfxPlayer.PlayHit();
+            SfxPlayer.PlayDamageFreeze();
         }
         invulnerabilityTimer = invulnerabilityDuration;
         GameEvents.TriggerPlayerDamageReceived(previousHealth - currentHealth);
@@ -241,7 +276,13 @@ public class SegmentHealth : MonoBehaviour
 
         if (!isHead)
         {
+            if (deathEffectPrefab != null)
+            {
+                Instantiate(deathEffectPrefab, transform.position, Quaternion.identity);
+            }
+
             SfxPlayer.PlayExplosion();
+            SfxPlayer.PlaySegmentDeathSlow();
         }
 
         if (isHead)

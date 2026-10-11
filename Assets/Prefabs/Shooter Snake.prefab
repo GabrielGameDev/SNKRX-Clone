@@ -190,6 +190,7 @@ MonoBehaviour:
   invulnerabilityDuration: 1
   spriteRenderer: {fileID: 79074488900445090}
   hitFlashColor: {r: 1, g: 0.3, b: 0.3, a: 1}
+  deathEffectPrefab: {fileID: 5395415390795755325, guid: 3b77e04f6b824a92966ce7a5a6c4b7dd, type: 3}
 --- !u!114 &-1309256875503839059
 MonoBehaviour:
   m_ObjectHideFlags: 0

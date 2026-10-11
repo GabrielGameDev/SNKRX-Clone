@@ -87,11 +87,13 @@ public class SnakeMovement : MonoBehaviour
     private Vector2 currentEffectiveHalfSize;
     private Vector2 currentEffectiveSize;
     private Rigidbody2D rb2d;
+    private float initialMoveSpeed;
 
     public static SnakeMovement Instance { get; private set; }
 
     public IReadOnlyList<SnakeSegment> Segments => segments;
     public Vector3 HeadPosition => transform.position;
+    public float InitialMoveSpeed => initialMoveSpeed;
     public float MoveSpeed { get => moveSpeed; set => moveSpeed = value; }
     public float SteerSpeed { get => steerSpeed; set => steerSpeed = value; }
     public float SegmentSpacing { get => segmentSpacing; set => segmentSpacing = Mathf.Max(0.1f, value); }
@@ -109,6 +111,7 @@ public class SnakeMovement : MonoBehaviour
             return;
         }
         Instance = this;
+        initialMoveSpeed = moveSpeed;
 
         if (inputController == null)
         {

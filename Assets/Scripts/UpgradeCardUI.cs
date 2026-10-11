@@ -1,6 +1,8 @@
 using System;
+using System.Collections;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -8,7 +10,7 @@ using UnityEngine.UI;
 /// Exibe a cor da run, o título (? ? ? se desconhecido ou o nome real se descoberto),
 /// descrição e botão de escolha com feedback visual.
 /// </summary>
-public class UpgradeCardUI : MonoBehaviour
+public class UpgradeCardUI : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 {
     [Header("Elementos Visuais")]
     [Tooltip("Imagem da esfera/orbe que representa a cor da run.")]
@@ -35,6 +37,14 @@ public class UpgradeCardUI : MonoBehaviour
     private RunUpgradeState currentState;
     private Action<RunUpgradeState> onSelectedCallback;
     private static Sprite circleSpriteCache;
+    private RectTransform cardRect;
+    private CanvasGroup canvasGroup;
+    private Coroutine revealCoroutine;
+    private Coroutine clickCoroutine;
+    private Color normalBorderColor;
+    private bool isHovered;
+    private bool isRevealed;
+    private bool isClicking;
 
     public Image ColorOrb { get => colorOrb; set => colorOrb = value; }
     public Image CardBorder { get => cardBorder; set => cardBorder = value; }
@@ -46,6 +56,10 @@ public class UpgradeCardUI : MonoBehaviour
 
     private void Awake()
     {
+        cardRect = transform as RectTransform;
+        canvasGroup = GetComponent<CanvasGroup>();
+        if (canvasGroup == null) canvasGroup = gameObject.AddComponent<CanvasGroup>();
+
         if (selectButton == null)
         {
             selectButton = GetComponent<Button>();
@@ -63,6 +77,92 @@ public class UpgradeCardUI : MonoBehaviour
         {
             selectButton.onClick.RemoveListener(HandleClicked);
         }
+    }
+
+    private void OnDisable()
+    {
+        if (revealCoroutine != null) StopCoroutine(revealCoroutine);
+        if (clickCoroutine != null) StopCoroutine(clickCoroutine);
+        revealCoroutine = null;
+        clickCoroutine = null;
+        isClicking = false;
+        isHovered = false;
+        isRevealed = false;
+        if (canvasGroup != null) canvasGroup.alpha = 1f;
+        if (cardRect != null)
+        {
+            cardRect.localScale = Vector3.one;
+            cardRect.localRotation = Quaternion.identity;
+        }
+    }
+
+    private void Update()
+    {
+        if (!isRevealed || isClicking || cardRect == null) return;
+
+        float targetScale = isHovered ? 1.06f : 1f;
+        float targetAngle = isHovered ? -2f : 0f;
+        float blend = 1f - Mathf.Exp(-14f * Time.unscaledDeltaTime);
+        cardRect.localScale = Vector3.Lerp(cardRect.localScale, Vector3.one * targetScale, blend);
+        cardRect.localRotation = Quaternion.Slerp(cardRect.localRotation, Quaternion.Euler(0f, 0f, targetAngle), blend);
+
+        if (cardBorder != null)
+        {
+            Color targetColor = isHovered ? Color.Lerp(normalBorderColor, Color.white, 0.35f) : normalBorderColor;
+            cardBorder.color = Color.Lerp(cardBorder.color, targetColor, blend);
+        }
+    }
+
+    public void OnPointerEnter(PointerEventData eventData)
+    {
+        isHovered = true;
+    }
+
+    public void OnPointerExit(PointerEventData eventData)
+    {
+        isHovered = false;
+    }
+
+    public void PlayReveal(float delay)
+    {
+        if (revealCoroutine != null) StopCoroutine(revealCoroutine);
+        if (clickCoroutine != null) StopCoroutine(clickCoroutine);
+        isClicking = false;
+        isHovered = false;
+        isRevealed = false;
+        if (cardRect == null) cardRect = transform as RectTransform;
+        if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>() ?? gameObject.AddComponent<CanvasGroup>();
+
+        canvasGroup.alpha = 0f;
+        cardRect.localScale = Vector3.one * 0.82f;
+        cardRect.localRotation = Quaternion.Euler(0f, 0f, 5f);
+        if (selectButton != null) selectButton.interactable = false;
+        revealCoroutine = StartCoroutine(RevealRoutine(Mathf.Max(0f, delay)));
+    }
+
+    private IEnumerator RevealRoutine(float delay)
+    {
+        if (delay > 0f) yield return new WaitForSecondsRealtime(delay);
+
+        const float duration = 0.32f;
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float eased = 1f - Mathf.Pow(1f - t, 3f);
+            canvasGroup.alpha = eased;
+            cardRect.localScale = Vector3.Lerp(Vector3.one * 0.82f, Vector3.one, eased);
+            cardRect.localRotation = Quaternion.Lerp(Quaternion.Euler(0f, 0f, 5f), Quaternion.identity, eased);
+            yield return null;
+        }
+
+        canvasGroup.alpha = 1f;
+        cardRect.localScale = Vector3.one;
+        cardRect.localRotation = Quaternion.identity;
+        isRevealed = true;
+        if (selectButton != null) selectButton.interactable = true;
+        revealCoroutine = null;
     }
 
     /// <summary>
@@ -99,12 +199,13 @@ public class UpgradeCardUI : MonoBehaviour
     {
         currentState = state;
         onSelectedCallback = onSelected;
+        isClicking = false;
+        if (cardRect == null) cardRect = transform as RectTransform;
 
         Color runColor = state.AssignedColor.color;
         string colorName = state.AssignedColor.colorName;
 
         // Keep the cards readable in both the scene and dynamically generated layouts.
-        RectTransform cardRect = transform as RectTransform;
         if (cardRect != null) cardRect.sizeDelta = new Vector2(320f, 480f);
         Image background = GetComponent<Image>();
         if (background != null) background.color = new Color(0.96f, 0.95f, 0.91f, 1f);
@@ -122,6 +223,7 @@ public class UpgradeCardUI : MonoBehaviour
         if (cardBorder != null)
         {
             cardBorder.color = new Color(runColor.r, runColor.g, runColor.b, 0.9f);
+            normalBorderColor = cardBorder.color;
         }
 
         if (colorNameText != null)
@@ -203,9 +305,31 @@ public class UpgradeCardUI : MonoBehaviour
 
     private void HandleClicked()
     {
-        if (currentState != null)
+        if (currentState == null || isClicking) return;
+        isClicking = true;
+        if (clickCoroutine != null) StopCoroutine(clickCoroutine);
+        clickCoroutine = StartCoroutine(ClickRoutine());
+    }
+
+    private IEnumerator ClickRoutine()
+    {
+        Vector3 startScale = cardRect != null ? cardRect.localScale : Vector3.one;
+        const float duration = 0.16f;
+        float elapsed = 0f;
+
+        while (elapsed < duration)
         {
-            onSelectedCallback?.Invoke(currentState);
+            elapsed += Time.unscaledDeltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float pulse = t < 0.45f
+                ? Mathf.Lerp(1f, 0.92f, t / 0.45f)
+                : Mathf.Lerp(0.92f, 1.08f, (t - 0.45f) / 0.55f);
+            if (cardRect != null) cardRect.localScale = startScale * pulse;
+            yield return null;
         }
+
+        if (cardRect != null) cardRect.localScale = Vector3.one;
+        clickCoroutine = null;
+        onSelectedCallback?.Invoke(currentState);
     }
 }

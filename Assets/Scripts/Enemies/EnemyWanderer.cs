@@ -66,7 +66,10 @@ public class EnemyWanderer : MonoBehaviour
 
     private void MoveAndBounceWithinBounds()
     {
-        Vector2 nextPos = (Vector2)transform.position + (currentDirection * (speed * Time.deltaTime));
+        Vector2 separation = EnemySeparation.GetDirection(transform);
+        Vector2 moveDirection = (currentDirection + separation * 1.5f).normalized;
+        if (moveDirection == Vector2.zero) moveDirection = currentDirection;
+        Vector2 nextPos = (Vector2)transform.position + (moveDirection * (speed * Time.deltaTime));
         Bounds2D bounds = ArenaBounds.GetBounds(edgeMargin);
 
         // Verifica colisões com os limites horizontal e vertical

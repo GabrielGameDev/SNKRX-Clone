@@ -102,6 +102,7 @@ MonoBehaviour:
   maxHealth: 2
   xpPickupPrefab: {fileID: 7655408179083036505, guid: abda291cfa27eee4c979b8e55c2ebed8, type: 3}
   xpDropAmount: 1
+  deathEffectPrefab: {fileID: 9156134745934892906, guid: f7ca2d3a17b04d4fab69180e047ad2c1, type: 3}
 --- !u!1 &7153389321691915046
 GameObject:
   m_ObjectHideFlags: 0

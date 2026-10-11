@@ -76,10 +76,11 @@ public class EnemyKamikaze : MonoBehaviour
     {
         if (SnakeMovement.Instance == null) return;
 
-        Vector3 targetPos = SnakeMovement.Instance.HeadPosition;
+        // Mira para o membro da cobra mais próximo, incluindo a cabeça e os segmentos.
+        Vector3 targetPos = SnakeMovement.Instance.GetNearestTargetPosition(transform.position);
         float distance = Vector2.Distance(transform.position, targetPos);
 
-        // Se chegou perto o suficiente da cobra, para e começa o priming
+        // Se chegou perto o suficiente de qualquer parte da cobra, começa o priming.
         if (distance <= stopDistance)
         {
             StartPriming();
@@ -87,6 +88,7 @@ public class EnemyKamikaze : MonoBehaviour
         }
 
         Vector2 direction = ((Vector2)targetPos - (Vector2)transform.position).normalized;
+        direction = (direction + EnemySeparation.GetDirection(transform) * 1.5f).normalized;
         if (direction != Vector2.zero)
         {
             Vector2 nextPos = (Vector2)transform.position + (direction * (speed * Time.deltaTime));

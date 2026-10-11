@@ -77,6 +77,7 @@ public class GameFlowController : MonoBehaviour
         if (state == ScreenState.Title)
         {
             state = ScreenState.Playing;
+            MusicAudioController.SetGameplayState();
             runStartTime = Time.unscaledTime;
             titlePanel.SetActive(false);
             Time.timeScale = 1f;
@@ -108,6 +109,7 @@ public class GameFlowController : MonoBehaviour
         if (state != ScreenState.Playing) return;
         SfxPlayer.PlayGameOver();
         state = ScreenState.GameOver;
+        MusicAudioController.SetPausedScreenState();
         Time.timeScale = 0f;
         ShowGameOver();
     }
@@ -142,6 +144,7 @@ public class GameFlowController : MonoBehaviour
 
     private void ShowTitle()
     {
+        MusicAudioController.SetMenuState();
         startPromptText.text = "Press any key to Start";
         gameOverPanel.SetActive(false);
         titlePanel.SetActive(true);
@@ -149,6 +152,7 @@ public class GameFlowController : MonoBehaviour
 
     private void ShowGameOver()
     {
+        MusicAudioController.SetPausedScreenState();
         float duration = Mathf.Max(0f, Time.unscaledTime - runStartTime);
         int score = enemiesKilled * 100 + wavesCompleted * 500 + levelsGained * 250;
         int level = FindAnyObjectByType<PlayerExperience>()?.CurrentLevel ?? levelsGained + 1;

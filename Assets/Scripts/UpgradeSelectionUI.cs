@@ -40,6 +40,8 @@ public class UpgradeSelectionUI : MonoBehaviour
     private bool isResolvingChoice = false;
     private readonly List<UpgradeCardUI> spawnedCards = new List<UpgradeCardUI>();
 
+    public bool IsSelecting => isSelecting;
+
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -124,7 +126,7 @@ public class UpgradeSelectionUI : MonoBehaviour
 
         isSelecting = true;
         isResolvingChoice = false;
-        SfxPlayer.PlayUpgrade();
+        MusicAudioController.SetPausedScreenState();
         SetCardsInteractable(true);
         Time.timeScale = 0f; // Pausa o jogo durante a escolha
 
@@ -145,6 +147,7 @@ public class UpgradeSelectionUI : MonoBehaviour
                 {
                     cardSlots[i].gameObject.SetActive(true);
                     cardSlots[i].Setup(choices[i], OnCardSelected);
+                    cardSlots[i].PlayReveal(i * 0.12f);
                 }
                 else
                 {
@@ -161,6 +164,7 @@ public class UpgradeSelectionUI : MonoBehaviour
             {
                 UpgradeCardUI card = Instantiate(cardPrefab, cardsContainer);
                 card.Setup(choices[i], OnCardSelected);
+                card.PlayReveal(i * 0.12f);
                 spawnedCards.Add(card);
             }
         }
@@ -172,6 +176,8 @@ public class UpgradeSelectionUI : MonoBehaviour
     private void OnCardSelected(RunUpgradeState selectedState)
     {
         if (isResolvingChoice || selectedState == null || UpgradeManager.Instance == null) return;
+
+        SfxPlayer.PlayUpgradeCardSelect();
 
         bool wasUndiscovered = !selectedState.IsDiscovered;
 
@@ -193,7 +199,7 @@ public class UpgradeSelectionUI : MonoBehaviour
     private IEnumerator CompleteUndiscoveredChoice()
     {
         // Keep the selected card visible long enough to read its newly revealed effect.
-        yield return new WaitForSecondsRealtime(2f);
+        yield return new WaitForSecondsRealtime(4f);
         CompleteChoiceAndContinue();
     }
 
@@ -250,6 +256,7 @@ public class UpgradeSelectionUI : MonoBehaviour
     private void CloseModal()
     {
         isSelecting = false;
+        MusicAudioController.SetGameplayState();
         Time.timeScale = 1f;
 
         if (modalRoot != null)

@@ -41,6 +41,10 @@ public class UpgradeManager : MonoBehaviour
     [Tooltip("Prefab do segmento normal do corpo (Snake Segment).")]
     [SerializeField] private SnakeSegment defaultSegmentPrefab;
 
+    [Header("Debug")]
+    [Tooltip("Shows upgrade levels and effective snake stats on screen during gameplay.")]
+    [SerializeField] private bool showDebugOverlay;
+
     // Modificadores de gameplay acumulados na run
     public float GlobalDamageMultiplier { get; private set; } = 1.0f;
     public float RangeMultiplier { get; private set; } = 1.0f;
@@ -280,5 +284,86 @@ public class UpgradeManager : MonoBehaviour
     {
         var definition = balanceData != null ? balanceData.Get(type) : null;
         return definition != null ? definition.amount : fallback;
+    }
+
+    private void OnGUI()
+    {
+        bool upgradeSelectionOpen = UpgradeSelectionUI.Instance != null && UpgradeSelectionUI.Instance.IsSelecting;
+        if (!showDebugOverlay && !upgradeSelectionOpen) return;
+
+        const float width = 360f;
+        const float height = 500f;
+        GUILayout.BeginArea(new Rect(Screen.width - width - 12f, 12f, width, height), GUI.skin.box);
+        SnakeMovement snake = SnakeMovement.Instance;
+        if (snake == null)
+        {
+            GUILayout.Label("Snake not found.");
+            GUILayout.EndArea();
+            return;
+        }
+
+        float speedMultiplier = snake.InitialMoveSpeed > 0f
+            ? snake.MoveSpeed / snake.InitialMoveSpeed
+            : 1f;
+        GUILayout.Label($"Move speed: {snake.MoveSpeed:0.##} ({speedMultiplier:0.##}x base)");
+        GUILayout.Label($"Turn speed: {snake.SteerSpeed:0.##}°/s | Segments: {snake.Segments.Count}");
+
+        float totalHealth = 0f;
+        float totalMaxHealth = 0f;
+        AccumulateHealth(snake.GetComponent<SegmentHealth>(), ref totalHealth, ref totalMaxHealth);
+
+        int shooterCount = 0;
+        int bomberCount = 0;
+        float shooterRange = 0f;
+        float projectileDamage = 0f;
+        float bomberRadius = 0f;
+        float bomberDamage = 0f;
+
+        for (int i = 0; i < snake.Segments.Count; i++)
+        {
+            SnakeSegment segment = snake.Segments[i];
+            if (segment == null) continue;
+
+            AccumulateHealth(segment.GetComponent<SegmentHealth>(), ref totalHealth, ref totalMaxHealth);
+
+            SegmentShooter shooter = segment.GetComponent<SegmentShooter>();
+            if (shooter != null)
+            {
+                shooterCount++;
+                shooterRange = Mathf.Max(shooterRange, shooter.EffectiveAttackRange);
+                projectileDamage = Mathf.Max(projectileDamage, shooter.BaseProjectileDamage * GlobalDamageMultiplier);
+            }
+
+            SegmentBomber bomber = segment.GetComponent<SegmentBomber>();
+            if (bomber != null)
+            {
+                bomberCount++;
+                bomberRadius = Mathf.Max(bomberRadius, bomber.EffectiveExplosionRadius);
+                bomberDamage = Mathf.Max(bomberDamage, bomber.EffectiveExplosionDamage);
+            }
+        }
+
+        GUILayout.Label($"Total health: {totalHealth:0.#} / {totalMaxHealth:0.#} | Bonus per segment: +{BonusMaxHealth:0.#}");
+        GUILayout.Label($"Global damage: {GlobalDamageMultiplier:0.##}x | Effective projectile damage: {projectileDamage:0.##}");
+        GUILayout.Label($"Range multiplier: {RangeMultiplier:0.##}x | Shooters: {shooterCount} (range {shooterRange:0.##})");
+        GUILayout.Label($"Bombers: {bomberCount} (radius {bomberRadius:0.##}, damage {bomberDamage:0.##})");
+        GUILayout.Label($"XP magnet: radius {MagnetRadius:0.##} | pull speed {MagnetPullSpeed:0.##}");
+        GUILayout.Space(6f);
+        GUILayout.Label("Upgrade levels:");
+
+        foreach (UpgradeType type in Enum.GetValues(typeof(UpgradeType)))
+        {
+            RunUpgradeState state = GetUpgradeState(type);
+            GUILayout.Label($"{type}: {state?.Level ?? 0}");
+        }
+
+        GUILayout.EndArea();
+    }
+
+    private static void AccumulateHealth(SegmentHealth health, ref float current, ref float maximum)
+    {
+        if (health == null) return;
+        current += health.CurrentHealth;
+        maximum += health.MaxHealth;
     }
 }

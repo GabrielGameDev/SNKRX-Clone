@@ -42,6 +42,7 @@ public class EnemyChaser : MonoBehaviour
             : SnakeMovement.Instance.HeadPosition;
 
         Vector2 direction = ((Vector2)targetPos - (Vector2)transform.position).normalized;
+        direction = (direction + EnemySeparation.GetDirection(transform) * 1.5f).normalized;
 
         if (direction != Vector2.zero)
         {
