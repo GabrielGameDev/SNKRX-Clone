@@ -1517,6 +1517,7 @@ GameObject:
   - component: {fileID: 585830705}
   - component: {fileID: 585830704}
   - component: {fileID: 900000001}
+  - component: {fileID: 900000002}
   m_Layer: 0
   m_Name: Music
   m_TagString: Untagged
@@ -2757,6 +2758,31 @@ MonoBehaviour:
   gameplayCutoffFrequency: 5000
   pitchVariation: 0.12
   pitchChangeInterval: 0.15
+--- !u!169 &900000002
+AudioLowPassFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 585830703}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_LowpassResonanceQ: 1
+  lowpassLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0.022282856
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!1 &1065596566
 GameObject:
   m_ObjectHideFlags: 0
